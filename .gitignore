@@ -14,6 +14,9 @@ npm-debug.log*
 .env
 .env.local
 
+# E2E test environment (contains API keys)
+tests/e2e/.env
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -38,6 +41,7 @@ lib/prompts/**/*.generated.ts
 
 # Tests
 tests/results/
+tests/e2e/results/
 notes/
 test-update.ts
 
