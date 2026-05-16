@@ -476,7 +476,8 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
 
                 const validateLimitValue = (key: string, value: unknown): void => {
                     const isValidNumber = typeof value === "number"
-                    const isPercentString = typeof value === "string" && value.endsWith("%")
+                    const isPercentString = typeof value === "string" && /^\d+(?:\.\d+)?%$/.test(value)
+
                     if (!isValidNumber && !isPercentString) {
                         errors.push({
                             key,
@@ -506,6 +507,16 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                             })
                         }
                     }
+                }
+            }
+
+            if (compress.providers !== undefined) {
+                if (typeof compress.providers !== "object" || compress.providers === null || Array.isArray(compress.providers)) {
+                    errors.push({
+                        key: "compress.providers",
+                        expected: "object",
+                        actual: Array.isArray(compress.providers) ? "array" : typeof compress.providers,
+                    })
                 }
             }
 
