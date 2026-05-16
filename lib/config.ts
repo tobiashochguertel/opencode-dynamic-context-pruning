@@ -410,6 +410,14 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
+                if (overrides.showCompression !== undefined && typeof overrides.showCompression !== "boolean") {
+                    errors.push({
+                        key: `${keyPrefix}.showCompression`,
+                        expected: "boolean",
+                        actual: typeof overrides.showCompression,
+                    })
+                }
+
                 if (overrides.nudgeFrequency !== undefined && typeof overrides.nudgeFrequency !== "number") {
                     errors.push({
                         key: `${keyPrefix}.nudgeFrequency`,
@@ -1123,6 +1131,11 @@ export function getResolvedCompressValue<T>(
             if (exactModel && field in exactModel) {
                 return extract(exactModel)
             }
+
+            const modelWildcard = exactProvider.models?.["*"]
+            if (modelWildcard && field in modelWildcard) {
+                return extract(modelWildcard)
+            }
         }
 
         const wildcardProvider = compress.providers["*"]
@@ -1130,6 +1143,11 @@ export function getResolvedCompressValue<T>(
             const wildcardModel = wildcardProvider.models?.[modelId]
             if (wildcardModel && field in wildcardModel) {
                 return extract(wildcardModel)
+            }
+
+            const wildcardModelWildcard = wildcardProvider.models?.["*"]
+            if (wildcardModelWildcard && field in wildcardModelWildcard) {
+                return extract(wildcardModelWildcard)
             }
         }
     }
