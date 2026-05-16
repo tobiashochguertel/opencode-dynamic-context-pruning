@@ -24,7 +24,10 @@
         "prepublishOnly": "npm run check:package",
         "dev": "opencode plugin dev",
         "typecheck": "tsc --noEmit",
-        "test": "node --import tsx --test tests/*.test.ts",
+        "test": "npm run test:unit && npm run test:integration",
+        "test:unit": "node --import tsx --test tests/unit/*.test.ts",
+        "test:integration": "node --import tsx --test tests/integration/*.test.ts",
+        "test:e2e": "bash tests/e2e/test-dcp-cache.sh",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "dcp": "tsx scripts/print.ts"

@@ -1,20 +1,20 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig } from "../lib/config"
+import type { PluginConfig } from "../../lib/config"
 import {
     createChatMessageTransformHandler,
     createCommandExecuteHandler,
     createEventHandler,
     createSystemPromptHandler,
     createTextCompleteHandler,
-} from "../lib/hooks"
-import { Logger } from "../lib/logger"
+} from "../../lib/hooks"
+import { Logger } from "../../lib/logger"
 import {
     createSessionState,
     ensureSessionInitialized,
     saveSessionState,
     type WithParts,
-} from "../lib/state"
+} from "../../lib/state"
 
 function buildConfig(permission: "allow" | "ask" | "deny" = "allow"): PluginConfig {
     return {

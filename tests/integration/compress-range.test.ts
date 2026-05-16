@@ -3,10 +3,10 @@ import test from "node:test"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { mkdirSync } from "node:fs"
-import { createCompressRangeTool } from "../lib/compress/range"
-import { createSessionState, type WithParts } from "../lib/state"
-import type { PluginConfig } from "../lib/config"
-import { Logger } from "../lib/logger"
+import { createCompressRangeTool } from "../../lib/compress/range"
+import { createSessionState, type WithParts } from "../../lib/state"
+import type { PluginConfig } from "../../lib/config"
+import { Logger } from "../../lib/logger"
 
 const testDataHome = join(tmpdir(), `opencode-dcp-tests-${process.pid}`)
 const testConfigHome = join(tmpdir(), `opencode-dcp-config-tests-${process.pid}`)

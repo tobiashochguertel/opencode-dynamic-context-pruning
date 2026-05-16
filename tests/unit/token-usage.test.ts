@@ -1,11 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig } from "../lib/config"
-import { isContextOverLimits } from "../lib/messages/inject/utils"
-import { wrapCompressedSummary } from "../lib/compress/state"
-import { createSessionState, type WithParts } from "../lib/state"
-import type { CompressionBlock } from "../lib/state"
-import { getCurrentTokenUsage } from "../lib/token-utils"
+import type { PluginConfig } from "../../lib/config"
+import { isContextOverLimits } from "../../lib/messages/inject/utils"
+import { wrapCompressedSummary } from "../../lib/compress/state"
+import { createSessionState, type WithParts } from "../../lib/state"
+import type { CompressionBlock } from "../../lib/state"
+import { getCurrentTokenUsage } from "../../lib/token-utils"
 
 function buildConfig(maxContextLimit: number, minContextLimit = 1): PluginConfig {
     return {
