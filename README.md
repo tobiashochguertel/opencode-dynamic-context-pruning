@@ -122,20 +122,10 @@ Each level overrides the previous, so project settings take priority over global
         // reminders are off (compression less likely). At/above this, reminders
         // are on. Accepts: number or "X%" of model context window.
         "minContextLimit": 50000,
-        // Optional per-model override for maxContextLimit by providerID/modelID.
-        // If present, this wins over the global maxContextLimit.
-        // Accepts: number or "X%".
-        // Example:
-        // "modelMaxLimits": {
-        //     "openai/gpt-5.3-codex": 120000,
-        //     "anthropic/claude-sonnet-4.6": "80%"
-        // },
-        // Optional per-model override for minContextLimit.
-        // If present, this wins over the global minContextLimit.
-        // "modelMinLimits": {
-        //     "openai/gpt-5.3-codex": 50000,
-        //     "anthropic/claude-sonnet-4.6": "25%"
-        // },
+        // [DEPRECATED] Use compress.providers[providerId].models[modelId].maxContextLimit instead.
+        // "modelMaxLimits": { ... },
+        // [DEPRECATED] Use compress.providers[providerId].models[modelId].minContextLimit instead.
+        // "modelMinLimits": { ... },
         // How often the context-limit nudge fires (1 = every fetch, 5 = every 5th)
         "nudgeFrequency": 5,
         // Start adding compression reminders after this many
@@ -214,6 +204,50 @@ By default, these tools are always protected from pruning:
 The `protectedTools` arrays in `commands` and `strategies` add to this default list.
 
 For the `compress` tool, `compress.protectedTools` ensures specific tool outputs are appended to the compressed summary. By default it includes `task`, `skill`, `todowrite`, and `todoread`.
+
+### Per-Provider and Per-Model Configuration
+
+DCP supports hierarchical configuration overrides via `compress.providers`. This replaces the deprecated `modelMaxLimits`/`modelMinLimits` keys.
+
+**Resolution order** (last wins):
+1. `compress.*` — plugin-level defaults (lowest priority)
+2. `compress.providers["*"].*` — wildcard provider (all providers)
+3. `compress.providers[providerId].*` — all models under that provider
+4. `compress.providers["*"].models[modelId].*` — wildcard provider + exact model
+5. `compress.providers[providerId].models[modelId].*` — exact provider + exact model (highest)
+
+```jsonc
+{
+    "compress": {
+        "maxContextLimit": "90%",
+        "nudgeFrequency": 5,
+
+        "providers": {
+            // Every Google model inherits these overrides
+            "google": {
+                "maxContextLimit": "80%",
+                "nudgeFrequency": 10,
+                "iterationNudgeThreshold": 30,
+
+                "models": {
+                    // Specific model overrides its provider
+                    "gemini-2.5-pro": {
+                        "maxContextLimit": 200000,
+                        "nudgeFrequency": 3
+                    }
+                }
+            },
+
+            // Wildcard applies to any provider not explicitly listed
+            "*": {
+                "nudgeFrequency": 6
+            }
+        }
+    }
+}
+```
+
+Any compress field can be overridden per provider and per model.
 
 ## Impact on Prompt Caching
 

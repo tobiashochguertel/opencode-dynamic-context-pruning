@@ -12,22 +12,45 @@ export interface Deduplication {
     protectedTools: string[]
 }
 
-export interface CompressConfig {
+export interface CompressOverrides {
+    mode?: CompressMode
+    permission?: Permission
+    showCompression?: boolean
+    summaryBuffer?: boolean
+    maxContextLimit?: number | `${number}%`
+    minContextLimit?: number | `${number}%`
+    nudgeFrequency?: number
+    iterationNudgeThreshold?: number
+    nudgeForce?: "strong" | "soft"
+    protectedTools?: string[]
+    protectTags?: boolean
+    protectUserMessages?: boolean
+}
+
+export interface ModelOverrides extends CompressOverrides {
+}
+
+export interface ProviderOverrides extends CompressOverrides {
+    models?: Record<string, ModelOverrides>
+}
+
+export interface CompressConfig extends CompressOverrides {
     mode: CompressMode
     permission: Permission
     showCompression: boolean
     summaryBuffer: boolean
     maxContextLimit: number | `${number}%`
     minContextLimit: number | `${number}%`
-    modelMaxLimits?: Record<string, number | `${number}%`>
-    modelMinLimits?: Record<string, number | `${number}%`>
     nudgeFrequency: number
     iterationNudgeThreshold: number
     nudgeForce: "strong" | "soft"
     protectedTools: string[]
     protectTags: boolean
     protectUserMessages: boolean
+    providers?: Record<string, ProviderOverrides>
 }
+
+export type ResolvedCompressConfig = CompressConfig
 
 export interface Commands {
     enabled: boolean
@@ -73,8 +96,6 @@ export interface PluginConfig {
     }
 }
 
-type CompressOverride = Partial<CompressConfig>
-
 const DEFAULT_PROTECTED_TOOLS = [
     "task",
     "skill",
@@ -118,14 +139,15 @@ export const VALID_CONFIG_KEYS = new Set([
     "compress.summaryBuffer",
     "compress.maxContextLimit",
     "compress.minContextLimit",
-    "compress.modelMaxLimits",
-    "compress.modelMinLimits",
     "compress.nudgeFrequency",
     "compress.iterationNudgeThreshold",
     "compress.nudgeForce",
     "compress.protectedTools",
     "compress.protectTags",
     "compress.protectUserMessages",
+    "compress.providers",
+    "compress.modelMaxLimits",
+    "compress.modelMinLimits",
     "strategies",
     "strategies.deduplication",
     "strategies.deduplication.enabled",
@@ -142,8 +164,11 @@ function getConfigKeyPaths(obj: Record<string, any>, prefix = ""): string[] {
         const fullKey = prefix ? `${prefix}.${key}` : key
         keys.push(fullKey)
 
-        // model*Limits are dynamic maps keyed by providerID/modelID; do not recurse into arbitrary IDs.
         if (fullKey === "compress.modelMaxLimits" || fullKey === "compress.modelMinLimits") {
+            continue
+        }
+
+        if (fullKey === "compress.providers") {
             continue
         }
 
@@ -351,125 +376,154 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                 actual: typeof compress,
             })
         } else {
-            if (
-                compress.mode !== undefined &&
-                compress.mode !== "range" &&
-                compress.mode !== "message"
-            ) {
-                errors.push({
-                    key: "compress.mode",
-                    expected: '"range" | "message"',
-                    actual: JSON.stringify(compress.mode),
-                })
-            }
-
-            if (
-                compress.summaryBuffer !== undefined &&
-                typeof compress.summaryBuffer !== "boolean"
-            ) {
-                errors.push({
-                    key: "compress.summaryBuffer",
-                    expected: "boolean",
-                    actual: typeof compress.summaryBuffer,
-                })
-            }
-
-            if (
-                compress.nudgeFrequency !== undefined &&
-                typeof compress.nudgeFrequency !== "number"
-            ) {
-                errors.push({
-                    key: "compress.nudgeFrequency",
-                    expected: "number",
-                    actual: typeof compress.nudgeFrequency,
-                })
-            }
-
-            if (typeof compress.nudgeFrequency === "number" && compress.nudgeFrequency < 1) {
-                errors.push({
-                    key: "compress.nudgeFrequency",
-                    expected: "positive number (>= 1)",
-                    actual: `${compress.nudgeFrequency} (will be clamped to 1)`,
-                })
-            }
-
-            if (
-                compress.iterationNudgeThreshold !== undefined &&
-                typeof compress.iterationNudgeThreshold !== "number"
-            ) {
-                errors.push({
-                    key: "compress.iterationNudgeThreshold",
-                    expected: "number",
-                    actual: typeof compress.iterationNudgeThreshold,
-                })
-            }
-
-            if (
-                compress.nudgeForce !== undefined &&
-                compress.nudgeForce !== "strong" &&
-                compress.nudgeForce !== "soft"
-            ) {
-                errors.push({
-                    key: "compress.nudgeForce",
-                    expected: '"strong" | "soft"',
-                    actual: JSON.stringify(compress.nudgeForce),
-                })
-            }
-
-            if (compress.protectedTools !== undefined && !Array.isArray(compress.protectedTools)) {
-                errors.push({
-                    key: "compress.protectedTools",
-                    expected: "string[]",
-                    actual: typeof compress.protectedTools,
-                })
-            }
-
-            if (compress.protectTags !== undefined && typeof compress.protectTags !== "boolean") {
-                errors.push({
-                    key: "compress.protectTags",
-                    expected: "boolean",
-                    actual: typeof compress.protectTags,
-                })
-            }
-
-            if (
-                compress.protectUserMessages !== undefined &&
-                typeof compress.protectUserMessages !== "boolean"
-            ) {
-                errors.push({
-                    key: "compress.protectUserMessages",
-                    expected: "boolean",
-                    actual: typeof compress.protectUserMessages,
-                })
-            }
-
-            if (
-                typeof compress.iterationNudgeThreshold === "number" &&
-                compress.iterationNudgeThreshold < 1
-            ) {
-                errors.push({
-                    key: "compress.iterationNudgeThreshold",
-                    expected: "positive number (>= 1)",
-                    actual: `${compress.iterationNudgeThreshold} (will be clamped to 1)`,
-                })
-            }
-
-            const validateLimitValue = (
-                key: string,
-                value: unknown,
-                actualValue: unknown = value,
+            const validateCompressOverrides = (
+                keyPrefix: string,
+                overrides: Record<string, any>,
+                allowMode: boolean,
             ): void => {
-                const isValidNumber = typeof value === "number"
-                const isPercentString = typeof value === "string" && value.endsWith("%")
+                if (allowMode && overrides.mode !== undefined) {
+                    if (overrides.mode !== "range" && overrides.mode !== "message") {
+                        errors.push({
+                            key: `${keyPrefix}.mode`,
+                            expected: '"range" | "message"',
+                            actual: JSON.stringify(overrides.mode),
+                        })
+                    }
+                }
 
-                if (!isValidNumber && !isPercentString) {
+                if (overrides.permission !== undefined) {
+                    const validValues = ["ask", "allow", "deny"]
+                    if (!validValues.includes(overrides.permission)) {
+                        errors.push({
+                            key: `${keyPrefix}.permission`,
+                            expected: '"ask" | "allow" | "deny"',
+                            actual: JSON.stringify(overrides.permission),
+                        })
+                    }
+                }
+
+                if (overrides.summaryBuffer !== undefined && typeof overrides.summaryBuffer !== "boolean") {
                     errors.push({
-                        key,
-                        expected: 'number | "${number}%"',
-                        actual: JSON.stringify(actualValue),
+                        key: `${keyPrefix}.summaryBuffer`,
+                        expected: "boolean",
+                        actual: typeof overrides.summaryBuffer,
                     })
                 }
+
+                if (overrides.nudgeFrequency !== undefined && typeof overrides.nudgeFrequency !== "number") {
+                    errors.push({
+                        key: `${keyPrefix}.nudgeFrequency`,
+                        expected: "number",
+                        actual: typeof overrides.nudgeFrequency,
+                    })
+                }
+
+                if (typeof overrides.nudgeFrequency === "number" && overrides.nudgeFrequency < 1) {
+                    errors.push({
+                        key: `${keyPrefix}.nudgeFrequency`,
+                        expected: "positive number (>= 1)",
+                        actual: `${overrides.nudgeFrequency} (will be clamped to 1)`,
+                    })
+                }
+
+                if (overrides.iterationNudgeThreshold !== undefined && typeof overrides.iterationNudgeThreshold !== "number") {
+                    errors.push({
+                        key: `${keyPrefix}.iterationNudgeThreshold`,
+                        expected: "number",
+                        actual: typeof overrides.iterationNudgeThreshold,
+                    })
+                }
+
+                if (typeof overrides.iterationNudgeThreshold === "number" && overrides.iterationNudgeThreshold < 1) {
+                    errors.push({
+                        key: `${keyPrefix}.iterationNudgeThreshold`,
+                        expected: "positive number (>= 1)",
+                        actual: `${overrides.iterationNudgeThreshold} (will be clamped to 1)`,
+                    })
+                }
+
+                if (overrides.nudgeForce !== undefined && overrides.nudgeForce !== "strong" && overrides.nudgeForce !== "soft") {
+                    errors.push({
+                        key: `${keyPrefix}.nudgeForce`,
+                        expected: '"strong" | "soft"',
+                        actual: JSON.stringify(overrides.nudgeForce),
+                    })
+                }
+
+                if (overrides.protectedTools !== undefined && !Array.isArray(overrides.protectedTools)) {
+                    errors.push({
+                        key: `${keyPrefix}.protectedTools`,
+                        expected: "string[]",
+                        actual: typeof overrides.protectedTools,
+                    })
+                }
+
+                if (overrides.protectTags !== undefined && typeof overrides.protectTags !== "boolean") {
+                    errors.push({
+                        key: `${keyPrefix}.protectTags`,
+                        expected: "boolean",
+                        actual: typeof overrides.protectTags,
+                    })
+                }
+
+                if (overrides.protectUserMessages !== undefined && typeof overrides.protectUserMessages !== "boolean") {
+                    errors.push({
+                        key: `${keyPrefix}.protectUserMessages`,
+                        expected: "boolean",
+                        actual: typeof overrides.protectUserMessages,
+                    })
+                }
+
+                const validateLimitValue = (key: string, value: unknown): void => {
+                    const isValidNumber = typeof value === "number"
+                    const isPercentString = typeof value === "string" && value.endsWith("%")
+                    if (!isValidNumber && !isPercentString) {
+                        errors.push({
+                            key,
+                            expected: 'number | "${number}%"',
+                            actual: JSON.stringify(value),
+                        })
+                    }
+                }
+
+                if (overrides.maxContextLimit !== undefined) {
+                    validateLimitValue(`${keyPrefix}.maxContextLimit`, overrides.maxContextLimit)
+                }
+
+                if (overrides.minContextLimit !== undefined) {
+                    validateLimitValue(`${keyPrefix}.minContextLimit`, overrides.minContextLimit)
+                }
+
+                if (overrides.models && typeof overrides.models === "object" && !Array.isArray(overrides.models)) {
+                    for (const [modelId, modelOverrides] of Object.entries(overrides.models)) {
+                        if (modelOverrides && typeof modelOverrides === "object" && !Array.isArray(modelOverrides)) {
+                            validateCompressOverrides(`${keyPrefix}.models.${modelId}`, modelOverrides as Record<string, any>, false)
+                        } else {
+                            errors.push({
+                                key: `${keyPrefix}.models.${modelId}`,
+                                expected: "object",
+                                actual: typeof modelOverrides,
+                            })
+                        }
+                    }
+                }
             }
+
+            if (compress.providers && typeof compress.providers === "object" && !Array.isArray(compress.providers)) {
+                for (const [providerId, providerOverrides] of Object.entries(compress.providers)) {
+                    if (providerOverrides && typeof providerOverrides === "object" && !Array.isArray(providerOverrides)) {
+                        validateCompressOverrides(`compress.providers.${providerId}`, providerOverrides as Record<string, any>, true)
+                    } else {
+                        errors.push({
+                            key: `compress.providers.${providerId}`,
+                            expected: "object",
+                            actual: typeof providerOverrides,
+                        })
+                    }
+                }
+            }
+
+            validateCompressOverrides("compress", compress, true)
 
             const validateModelLimits = (
                 key: "compress.modelMaxLimits" | "compress.modelMinLimits",
@@ -500,14 +554,6 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                         })
                     }
                 }
-            }
-
-            if (compress.maxContextLimit !== undefined) {
-                validateLimitValue("compress.maxContextLimit", compress.maxContextLimit)
-            }
-
-            if (compress.minContextLimit !== undefined) {
-                validateLimitValue("compress.minContextLimit", compress.minContextLimit)
             }
 
             validateModelLimits("compress.modelMaxLimits", compress.modelMaxLimits)
@@ -581,7 +627,6 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     actual: typeof strategies.purgeErrors.turns,
                 })
             }
-            // Warn if turns is 0 or negative - will be clamped to 1
             if (
                 typeof strategies.purgeErrors.turns === "number" &&
                 strategies.purgeErrors.turns < 1
@@ -832,12 +877,54 @@ function mergeStrategies(
     }
 }
 
+function mergeProviderOverrides(
+    baseCompress: CompressConfig,
+    providerOverrides: ProviderOverrides,
+): ProviderOverrides {
+    const merged: ProviderOverrides = {}
+
+    if (providerOverrides.mode !== undefined) merged.mode = providerOverrides.mode
+    if (providerOverrides.permission !== undefined) merged.permission = providerOverrides.permission
+    if (providerOverrides.showCompression !== undefined) merged.showCompression = providerOverrides.showCompression
+    if (providerOverrides.summaryBuffer !== undefined) merged.summaryBuffer = providerOverrides.summaryBuffer
+    if (providerOverrides.maxContextLimit !== undefined) merged.maxContextLimit = providerOverrides.maxContextLimit
+    if (providerOverrides.minContextLimit !== undefined) merged.minContextLimit = providerOverrides.minContextLimit
+    if (providerOverrides.nudgeFrequency !== undefined) merged.nudgeFrequency = providerOverrides.nudgeFrequency
+    if (providerOverrides.iterationNudgeThreshold !== undefined) merged.iterationNudgeThreshold = providerOverrides.iterationNudgeThreshold
+    if (providerOverrides.nudgeForce !== undefined) merged.nudgeForce = providerOverrides.nudgeForce
+    if (providerOverrides.protectedTools !== undefined) {
+        merged.protectedTools = providerOverrides.protectedTools
+    }
+    if (providerOverrides.protectTags !== undefined) merged.protectTags = providerOverrides.protectTags
+    if (providerOverrides.protectUserMessages !== undefined) merged.protectUserMessages = providerOverrides.protectUserMessages
+    if (providerOverrides.models !== undefined) merged.models = providerOverrides.models
+
+    return merged
+}
+
 function mergeCompress(
     base: PluginConfig["compress"],
-    override?: CompressOverride,
+    override?: Partial<PluginConfig["compress"]>,
 ): PluginConfig["compress"] {
     if (!override) {
         return base
+    }
+
+    const mergedProviders: Record<string, ProviderOverrides> = {}
+    if (override.providers) {
+        for (const [providerId, providerOverrides] of Object.entries(override.providers)) {
+            if (providerOverrides && typeof providerOverrides === "object") {
+                mergedProviders[providerId] = mergeProviderOverrides(base, providerOverrides)
+            }
+        }
+    }
+
+    const baseProviders = base.providers ? { ...base.providers } : undefined
+    const finalProviders = baseProviders || mergedProviders
+    if (Object.keys(mergedProviders).length > 0) {
+        for (const [key, val] of Object.entries(mergedProviders)) {
+            finalProviders[key] = val
+        }
     }
 
     return {
@@ -847,14 +934,13 @@ function mergeCompress(
         summaryBuffer: override.summaryBuffer ?? base.summaryBuffer,
         maxContextLimit: override.maxContextLimit ?? base.maxContextLimit,
         minContextLimit: override.minContextLimit ?? base.minContextLimit,
-        modelMaxLimits: override.modelMaxLimits ?? base.modelMaxLimits,
-        modelMinLimits: override.modelMinLimits ?? base.modelMinLimits,
         nudgeFrequency: override.nudgeFrequency ?? base.nudgeFrequency,
         iterationNudgeThreshold: override.iterationNudgeThreshold ?? base.iterationNudgeThreshold,
         nudgeForce: override.nudgeForce ?? base.nudgeForce,
         protectedTools: [...new Set([...base.protectedTools, ...(override.protectedTools ?? [])])],
         protectTags: override.protectTags ?? base.protectTags,
         protectUserMessages: override.protectUserMessages ?? base.protectUserMessages,
+        providers: Object.keys(finalProviders).length > 0 ? finalProviders : undefined,
     }
 }
 
@@ -912,9 +998,10 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
         protectedFilePatterns: [...config.protectedFilePatterns],
         compress: {
             ...config.compress,
-            modelMaxLimits: { ...config.compress.modelMaxLimits },
-            modelMinLimits: { ...config.compress.modelMinLimits },
             protectedTools: [...config.compress.protectedTools],
+            providers: config.compress.providers
+                ? JSON.parse(JSON.stringify(config.compress.providers))
+                : undefined,
         },
         strategies: {
             deduplication: {
@@ -946,7 +1033,7 @@ function mergeLayer(config: PluginConfig, data: Record<string, any>): PluginConf
         protectedFilePatterns: [
             ...new Set([...config.protectedFilePatterns, ...(data.protectedFilePatterns ?? [])]),
         ],
-        compress: mergeCompress(config.compress, data.compress as CompressOverride),
+        compress: mergeCompress(config.compress, data.compress as any),
         strategies: mergeStrategies(config.strategies, data.strategies as any),
     }
 }
@@ -1004,4 +1091,55 @@ export function getConfig(ctx: PluginInput): PluginConfig {
     }
 
     return config
+}
+
+export function getResolvedCompressValue<T>(
+    config: PluginConfig,
+    providerId: string | undefined,
+    modelId: string | undefined,
+    field: keyof CompressOverrides,
+): T | undefined {
+    const compress = config.compress
+
+    const extract = (obj: CompressOverrides | undefined): T | undefined => {
+        return obj && field in obj ? (obj as any)[field] : undefined
+    }
+
+    if (providerId && modelId && compress.providers) {
+        const wildcardModel = compress.providers["*"]?.models?.[modelId]
+        if (wildcardModel && field in wildcardModel) {
+            return extract(wildcardModel)
+        }
+
+        const exactProvider = compress.providers[providerId]
+        if (exactProvider) {
+            const exactModel = exactProvider.models?.[modelId]
+            if (exactModel && field in exactModel) {
+                return extract(exactModel)
+            }
+        }
+
+        const wildcardProvider = compress.providers["*"]
+        if (wildcardProvider) {
+            const wildcardModelInner = wildcardProvider.models?.[modelId]
+            if (wildcardModelInner && field in wildcardModelInner) {
+                return extract(wildcardModelInner)
+            }
+        }
+    }
+
+    if (providerId && compress.providers) {
+        const wildcardProviderVal = compress.providers["*"]
+        if (wildcardProviderVal && field in wildcardProviderVal) {
+            const val = extract(wildcardProviderVal)
+            return val as T
+        }
+
+        const exactProvider = compress.providers[providerId]
+        if (exactProvider && field in exactProvider) {
+            return extract(exactProvider)
+        }
+    }
+
+    return undefined
 }

@@ -181,36 +181,6 @@
                         }
                     ]
                 },
-                "modelMaxLimits": {
-                    "description": "Per-model override for maxContextLimit by exact provider/model key. If set, this takes priority over the global maxContextLimit.",
-                    "type": "object",
-                    "additionalProperties": {
-                        "oneOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "string",
-                                "pattern": "^\\d+(?:\\.\\d+)?%$"
-                            }
-                        ]
-                    }
-                },
-                "modelMinLimits": {
-                    "description": "Per-model override for minContextLimit by exact provider/model key. If set, this takes priority over the global minContextLimit.",
-                    "type": "object",
-                    "additionalProperties": {
-                        "oneOf": [
-                            {
-                                "type": "number"
-                            },
-                            {
-                                "type": "string",
-                                "pattern": "^\\d+(?:\\.\\d+)?%$"
-                            }
-                        ]
-                    }
-                },
                 "nudgeFrequency": {
                     "type": "number",
                     "default": 5,
@@ -246,6 +216,168 @@
                     "type": "boolean",
                     "default": false,
                     "description": "When enabled, your messages are never lost during compression"
+                },
+                "providers": {
+                    "type": "object",
+                    "description": "Per-provider and per-model configuration overrides. Keys are provider IDs (e.g., \"anthropic\", \"opencode-go\") or \"*\" for a wildcard fallback.",
+                    "additionalProperties": {
+                        "type": "object",
+                        "description": "Provider-level override for compress settings. All fields are optional — any omitted field inherits from the plugin-level compress defaults.",
+                        "additionalProperties": false,
+                        "properties": {
+                            "mode": {
+                                "type": "string",
+                                "enum": ["range", "message"],
+                                "description": "Overrides compress.mode for all models under this provider."
+                            },
+                            "permission": {
+                                "type": "string",
+                                "enum": ["ask", "allow", "deny"],
+                                "description": "Overrides compress.permission for all models under this provider."
+                            },
+                            "showCompression": {
+                                "type": "boolean",
+                                "description": "Overrides compress.showCompression for all models under this provider."
+                            },
+                            "summaryBuffer": {
+                                "type": "boolean",
+                                "description": "Overrides compress.summaryBuffer for all models under this provider."
+                            },
+                            "maxContextLimit": {
+                                "description": "Overrides compress.maxContextLimit for all models under this provider.",
+                                "oneOf": [
+                                    { "type": "number" },
+                                    { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                                ]
+                            },
+                            "minContextLimit": {
+                                "description": "Overrides compress.minContextLimit for all models under this provider.",
+                                "oneOf": [
+                                    { "type": "number" },
+                                    { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                                ]
+                            },
+                            "nudgeFrequency": {
+                                "type": "number",
+                                "minimum": 1,
+                                "description": "Overrides compress.nudgeFrequency for all models under this provider."
+                            },
+                            "iterationNudgeThreshold": {
+                                "type": "number",
+                                "minimum": 1,
+                                "description": "Overrides compress.iterationNudgeThreshold for all models under this provider."
+                            },
+                            "nudgeForce": {
+                                "type": "string",
+                                "enum": ["strong", "soft"],
+                                "description": "Overrides compress.nudgeForce for all models under this provider."
+                            },
+                            "protectedTools": {
+                                "type": "array",
+                                "items": { "type": "string" },
+                                "description": "Additional tools to protect. Merged (not replaced) with parent-level protectedTools."
+                            },
+                            "protectTags": {
+                                "type": "boolean",
+                                "description": "Overrides compress.protectTags for all models under this provider."
+                            },
+                            "protectUserMessages": {
+                                "type": "boolean",
+                                "description": "Overrides compress.protectUserMessages for all models under this provider."
+                            },
+                            "models": {
+                                "type": "object",
+                                "description": "Per-model overrides within this provider. Keys are model IDs (e.g., \"claude-sonnet-4-6\", \"deepseek-v4-pro\").",
+                                "additionalProperties": {
+                                    "type": "object",
+                                    "description": "Model-level override. All fields are optional — any omitted field inherits from the provider level.",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "mode": {
+                                            "type": "string",
+                                            "enum": ["range", "message"],
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "permission": {
+                                            "type": "string",
+                                            "enum": ["ask", "allow", "deny"],
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "showCompression": {
+                                            "type": "boolean",
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "summaryBuffer": {
+                                            "type": "boolean",
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "maxContextLimit": {
+                                            "description": "Overrides for this specific model.",
+                                            "oneOf": [
+                                                { "type": "number" },
+                                                { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                                            ]
+                                        },
+                                        "minContextLimit": {
+                                            "description": "Overrides for this specific model.",
+                                            "oneOf": [
+                                                { "type": "number" },
+                                                { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                                            ]
+                                        },
+                                        "nudgeFrequency": {
+                                            "type": "number",
+                                            "minimum": 1,
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "iterationNudgeThreshold": {
+                                            "type": "number",
+                                            "minimum": 1,
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "nudgeForce": {
+                                            "type": "string",
+                                            "enum": ["strong", "soft"],
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "protectedTools": {
+                                            "type": "array",
+                                            "items": { "type": "string" },
+                                            "description": "Additional tools to protect. Merged (not replaced) with parent-level protectedTools."
+                                        },
+                                        "protectTags": {
+                                            "type": "boolean",
+                                            "description": "Overrides for this specific model."
+                                        },
+                                        "protectUserMessages": {
+                                            "type": "boolean",
+                                            "description": "Overrides for this specific model."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "modelMaxLimits": {
+                    "description": "[DEPRECATED] Use compress.providers[providerId].models[modelId].maxContextLimit instead.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "oneOf": [
+                            { "type": "number" },
+                            { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                        ]
+                    }
+                },
+                "modelMinLimits": {
+                    "description": "[DEPRECATED] Use compress.providers[providerId].models[modelId].minContextLimit instead.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "oneOf": [
+                            { "type": "number" },
+                            { "type": "string", "pattern": "^\\d+(?:\\.\\d+)?%$" }
+                        ]
+                    }
                 }
             },
             "default": {
@@ -280,9 +412,7 @@
                         },
                         "protectedTools": {
                             "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
+                            "items": { "type": "string" },
                             "default": [],
                             "description": "Tool names or wildcard patterns excluded from deduplication. Supports glob wildcards: * matches any characters, ? matches a single character (e.g., \"mcp_*\", \"my_tool_?\")"
                         }
@@ -305,9 +435,7 @@
                         },
                         "protectedTools": {
                             "type": "array",
-                            "items": {
-                                "type": "string"
-                            },
+                            "items": { "type": "string" },
                             "default": [],
                             "description": "Tool names or wildcard patterns excluded from error purging. Supports glob wildcards: * matches any characters, ? matches a single character (e.g., \"mcp_*\", \"my_tool_?\")"
                         }

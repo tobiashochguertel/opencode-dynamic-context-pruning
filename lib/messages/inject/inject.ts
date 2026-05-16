@@ -81,7 +81,7 @@ export const injectCompressNudges = (
 
     if (overMaxLimit) {
         if (lastMessage) {
-            const interval = getNudgeFrequency(config)
+            const interval = getNudgeFrequency(config, providerId, modelId)
             const added = addAnchor(
                 state.nudges.contextLimitAnchors,
                 lastMessage.message.info.id,
@@ -112,13 +112,13 @@ export const injectCompressNudges = (
             )
             if (lastUserMessageIndex >= 0) {
                 const messagesSinceUser = countMessagesAfterIndex(messages, lastUserMessageIndex)
-                const iterationThreshold = getIterationNudgeThreshold(config)
+                const iterationThreshold = getIterationNudgeThreshold(config, providerId, modelId)
 
                 if (
                     lastMessage.index > lastUserMessageIndex &&
                     messagesSinceUser >= iterationThreshold
                 ) {
-                    const interval = getNudgeFrequency(config)
+                    const interval = getNudgeFrequency(config, providerId, modelId)
                     const added = addAnchor(
                         state.nudges.iterationNudgeAnchors,
                         lastMessage.message.info.id,

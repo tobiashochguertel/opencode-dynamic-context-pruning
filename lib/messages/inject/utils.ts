@@ -1,5 +1,6 @@
 import type { SessionState, WithParts } from "../../state"
-import type { PluginConfig } from "../../config"
+import type { PluginConfig, CompressOverrides } from "../../config"
+import { getResolvedCompressValue } from "../../config"
 import {
     appendGuidanceToDcpTag,
     buildCompressedBlockGuidance,
@@ -34,12 +35,26 @@ export interface LastNonIgnoredMessage {
     index: number
 }
 
-export function getNudgeFrequency(config: PluginConfig): number {
-    return Math.max(1, Math.floor(config.compress.nudgeFrequency || 1))
+export function getNudgeFrequency(
+    config: PluginConfig,
+    providerId?: string,
+    modelId?: string,
+): number {
+    const resolved = getResolvedCompressValue<number>(
+        config, providerId, modelId, "nudgeFrequency",
+    )
+    return Math.max(1, Math.floor(resolved ?? config.compress.nudgeFrequency))
 }
 
-export function getIterationNudgeThreshold(config: PluginConfig): number {
-    return Math.max(1, Math.floor(config.compress.iterationNudgeThreshold || 1))
+export function getIterationNudgeThreshold(
+    config: PluginConfig,
+    providerId?: string,
+    modelId?: string,
+): number {
+    const resolved = getResolvedCompressValue<number>(
+        config, providerId, modelId, "iterationNudgeThreshold",
+    )
+    return Math.max(1, Math.floor(resolved ?? config.compress.iterationNudgeThreshold))
 }
 
 export function findLastNonIgnoredMessage(messages: WithParts[]): LastNonIgnoredMessage | null {
@@ -114,14 +129,16 @@ function resolveContextTokenLimit(
         return Math.round((clampedPercent / 100) * state.modelContextLimit)
     }
 
-    const modelLimits =
-        threshold === "max" ? config.compress.modelMaxLimits : config.compress.modelMinLimits
-    if (modelLimits && providerId !== undefined && modelId !== undefined) {
-        const providerModelId = `${providerId}/${modelId}`
-        const modelLimit = modelLimits[providerModelId]
-        if (modelLimit !== undefined) {
-            return parseLimitValue(modelLimit)
-        }
+    const contextField = threshold === "max" ? "maxContextLimit" : "minContextLimit"
+    const resolved = getResolvedCompressValue<number | `${number}%`>(
+        config,
+        providerId,
+        modelId,
+        contextField as keyof CompressOverrides,
+    )
+
+    if (resolved !== undefined) {
+        return parseLimitValue(resolved)
     }
 
     const globalLimit =
