@@ -1,91 +1,74 @@
-# Test Coverage Gaps — Hierarchical Config
+# Test Coverage — Hierarchical Config
 
-This document catalogs all known test coverage gaps identified after implementing the
-hierarchical provider/model configuration for the DCP plugin (39 test files, 201 tests:
-90 unit + 111 integration). Use it to prioritize further testing efforts.
+## Current Status
+
+**356 tests** (245 unit + 111 integration), **0 failures**, **0 skipped**.
+
+All priority categories 1–5 are **implemented**. Only Priority 6 (Documentation) remains as defined below.
 
 ## Completed Coverage
 
-| Area | Count | What's covered |
-|------|-------|----------------|
-| Resolution order | 12 | All hierarchy levels (model > provider > wildcard > global) |
-| Validation + deprecation | 9 | Type checking, deprecated modelMaxLimits/modelMinLimits |
-| Edge cases + inheritance | 8 | Empty configs, wildcards, inheritance chains, additive merges |
-| Per-field overrides | 41 | All 12 override fields at provider and model levels |
-| Pipeline integration | 15 | getNudgeFrequency, getIterationNudgeThreshold, isContextOverLimits |
-| Real-world configs | 22 | 6 provider/model combos with varying context windows |
-| Nudge pipeline | 7 | Nudge integration with hierarchical config resolution |
-| Layer merge | 3 | Global -> configDir -> project cascade |
+| Area | File(s) | Count |
+|------|---------|-------|
+| Resolution order | `hierarchical-config.test.ts` | 12 |
+| Validation + deprecation | `hierarchical-config-validation.test.ts` | 9 |
+| Edge cases + inheritance | `hierarchical-config-edge-cases.test.ts` | 8 |
+| Per-field overrides (all 12 fields) | `hierarchical-config-override-fields.test.ts` | 41 |
+| Negative / failure | `hierarchical-config-negative.test.ts` | 45 |
+| Wildcard matching | `wildcard-matching.test.ts` | 22 |
+| Backward compatibility | `hierarchical-config-backward-compat.test.ts` | 27 |
+| Merge / immutability | `hierarchical-config-merge-immutability.test.ts` | 26 |
+| Edge cases / integration | `hierarchical-config-edge-integration.test.ts` | 37 |
+| Pipeline integration | `hierarchical-config-resolution.test.ts` | 15 |
+| Real-world configs | `hierarchical-config-real-world.test.ts` | 22 |
+| Nudge pipeline | `hierarchical-config-nudge-pipeline.test.ts` | 7 |
+| Layer merge | `hierarchical-config-layer-merge.test.ts` | 3 |
 
-## Remaining Gaps
+## Test Matrix
 
-### Priority 1: Negative / Failure Tests (HIGH)
+| Test file | Type | Covers | Hierarchical? |
+|-----------|------|--------|:---:|
+| `hierarchical-config.test.ts` | unit | Resolution order, wildcard, percentages | Yes |
+| `hierarchical-config-validation.test.ts` | unit | Type checking, deprecated keys | Yes |
+| `hierarchical-config-edge-cases.test.ts` | unit | Empty configs, inheritance, wildcard fallthrough | Yes |
+| `hierarchical-config-override-fields.test.ts` | unit | All 12 fields at provider and model level | Yes |
+| `hierarchical-config-negative.test.ts` | unit | Null/undefined, malformed values, type errors | Yes |
+| `wildcard-matching.test.ts` | unit | Model-level wildcard, fallthrough, chain, special chars | Yes |
+| `hierarchical-config-backward-compat.test.ts` | unit | No providers, modelMaxLimits, runtime fallback | Yes |
+| `hierarchical-config-merge-immutability.test.ts` | unit | deepCloneConfig, mergeCompress, no mutation | Yes |
+| `hierarchical-config-edge-integration.test.ts` | unit | Unicode, long IDs, performance, extreme values | Yes |
+| `hierarchical-config-resolution.test.ts` | integration | getNudgeFrequency, isContextOverLimits | Yes |
+| `hierarchical-config-real-world.test.ts` | integration | 6 provider/model combos with context windows | Yes |
+| `hierarchical-config-nudge-pipeline.test.ts` | integration | Nudge integration with hierarchical resolution | Yes |
+| `hierarchical-config-layer-merge.test.ts` | integration | Global -> configDir -> project cascade | Yes |
+| `compression-targets.test.ts` | unit | Compression block grouping | No |
+| `compress-range-placeholders.test.ts` | unit | Block placeholder parsing/injection | No |
+| `host-permissions.test.ts` | unit | Permission resolution | No |
+| `message-ids.test.ts` | unit | Message reference assignment | No |
+| `message-utils.test.ts` | unit | Ignored user message detection | No |
+| `token-counting.test.ts` | unit | Token counting utilities | No |
+| `token-usage.test.ts` | unit | Context limit checking | No |
+| `compression-groups.test.ts` | integration | Compression grouping flow | No |
+| `compress-message.test.ts` | integration | Compress message tool | No |
+| `compress-range.test.ts` | integration | Compress range tool | No |
+| `hooks-permission.test.ts` | integration | OpenCode hooks | No |
+| `message-priority.test.ts` | integration | Priority/prune/inject pipeline | No |
+| `prompts.test.ts` | integration | PromptStore with file I/O | No |
+| `update.test.ts` | integration | Update/remove operations | No |
 
-| # | Gap | Description | Risk |
-|---|-----|-------------|------|
-| 1 | Null/undefined config | getResolvedCompressValue/validateConfigTypes with null/undefined | Crash |
-| 2 | Empty provider ID | providerId = "" should not match any provider | Wrong value fallback |
-| 3 | Empty model ID | modelId = "" should not match any model | Silent fallback |
-| 4 | Malformed percentages | "%-5", "%%50", "50%extra", "%50", "50 %" rejected | Parse errors |
-| 5 | Out-of-range percentages | maxContextLimit: "150%" or "-10%" clamped/rejected? | Undefined behavior |
-| 6 | Non-finite numeric values | Infinity, -Infinity, NaN as numeric fields | NaN propagation |
-| 7 | Null field values | Each override field set to null should be ignored | Type errors |
-| 8 | Negative nudge at model level | Negative nudgeFrequency in model override | Clamping untested |
-| 9 | Unknown keys in provider/model | Extra keys silently ignored or reported? | Validation gap |
-| 10 | validateConfigTypes missing compress | Config with no compress key | Undefined access |
-| 11 | Provider named "*" literally | Is "*" treated as wildcard or exact match? | Ambiguity |
-| 12 | Deeply nested invalid structures | Provider inside provider, models inside models | Recursion issues |
+## Remaining Gap
 
-### Priority 2: Wildcard Matching (HIGH)
+### Priority 6: Documentation
 
-| # | Gap | Description | Risk |
-|---|-----|-------------|------|
-| 1 | Model-level wildcard * inside provider | provider: { models: { "*": {...} } } | Core feature gap |
-| 2 | Model-level wildcard beats exact provider | Wildcard model vs provider-level override | Resolution order |
-| 3 | Wildcard + exact same field at different levels | Wildcard sets X, exact sets Y, model expects X or Y? | Inheritance |
-| 4 | Wildcard-only fallthrough | Only wildcard exists, no exact provider matches | Integration gap |
-| 5 | Provider named "**" | Double-star treated as wildcard or exact? | Ambiguity |
-| 6 | Wildcard with empty models | "*": { models: {} } | Noise in resolution |
-| 7 | Wildcard + deprecated modelMaxLimits together | Both active simultaneously | Precedence |
-
-### Priority 3: Backward Compatibility (MEDIUM)
-
-| # | Gap | Description | Risk |
-|---|-----|-------------|------|
-| 1 | No providers key | Config without compress.providers falls to globals | Regression |
-| 2 | providers explicitly undefined | providers: undefined treated as absent | Type handling |
-| 3 | Deprecated modelMaxLimits still valid | Old configs continue working | Silent breakage |
-| 4 | modelMaxLimits + providers together | Both present | Confusion |
-
-### Priority 4: Config Merge / Immutability (MEDIUM)
-
-| # | Gap | Description | Risk |
-|---|-----|-------------|------|
-| 1 | mergeCompress mutates base | Must not modify base config | Side-effect bugs |
-| 2 | deepCloneConfig independence | Fully independent copy | Reference sharing |
-| 3 | Global -> configDir -> project cascade with providers | Multi-layer merge correct | Wrong final config |
-| 4 | Project overrides configDir providers | Lower layer wins over higher | Wrong override direction |
-
-### Priority 5: Edge Cases / Integration (LOW)
-
-| # | Gap | Description | Risk |
-|---|-----|-------------|------|
-| 1 | 50+ providers | Performance degradation | Slow startup |
-| 2 | Special chars in IDs | "my-provider/v2", "model@1.0", "org/model:variant" | Matching errors |
-| 3 | Unicode provider/model IDs | CJK/emoji in IDs | Encoding issues |
-| 4 | Case sensitivity | "OpenCode-Go" vs "opencode-go" | Inconsistent matching |
-
-### Priority 6: Documentation (LOW)
-
-| # | Gap | Description |
+| # | Item | Description |
 |---|------|-------------|
 | 1 | Resolution order flowchart | Visual decision tree for model > provider > wildcard > global |
-| 2 | API docs for config.ts exports | Each exported function documented with params/returns |
-| 3 | Test matrix in README | Document which test files cover which scenarios |
+| 2 | Test matrix in README | This table, included in a project README section |
+| 3 | API docs for config.ts exports | JSDoc for each exported function |
 
 ---
 
 ## Legend
 
-- **Risk**: Likely consequence if gap is not addressed
-- **Priority**: 1 = highest, 6 = lowest
+- **Hierarchical?** — Whether the test specifically covers the hierarchical provider/model config feature
+- **Priority**: 1–6 (all 1–5 completed)

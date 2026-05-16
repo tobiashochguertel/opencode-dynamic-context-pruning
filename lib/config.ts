@@ -179,6 +179,7 @@ function getConfigKeyPaths(obj: Record<string, any>, prefix = ""): string[] {
     return keys
 }
 
+/** Return keys present in user config that are not in VALID_CONFIG_KEYS. */
 export function getInvalidConfigKeys(userConfig: Record<string, any>): string[] {
     const userKeys = getConfigKeyPaths(userConfig)
     return userKeys.filter((key) => !VALID_CONFIG_KEYS.has(key))
@@ -190,6 +191,7 @@ interface ValidationError {
     actual: string
 }
 
+/** Validate all config field types and return a list of type/validation errors. */
 export function validateConfigTypes(config: Record<string, any>): ValidationError[] {
     const errors: ValidationError[] = []
 
@@ -959,6 +961,7 @@ function mergeExperimental(
     }
 }
 
+/** Deep-clone a PluginConfig so mutations to the clone don't affect the original. */
 export function deepCloneConfig(config: PluginConfig): PluginConfig {
     return {
         ...config,
@@ -993,6 +996,12 @@ export function deepCloneConfig(config: PluginConfig): PluginConfig {
     }
 }
 
+/**
+ * Merge a compress config override into a base compress config.
+ * Provider entries from the override replace same-named entries in the base,
+ * but individual fields within a provider are merged (non-overridden fields
+ * from the base provider are preserved).
+ */
 export function mergeCompress(
     base: PluginConfig["compress"],
     override?: Partial<PluginConfig["compress"]>,
@@ -1087,6 +1096,14 @@ function scheduleParseWarning(ctx: PluginInput, title: string, message: string):
     }, 7000)
 }
 
+/**
+ * Load and merge DCP config from three layers:
+ *   1. Global config (~/.config/opencode/dcp.jsonc)
+ *   2. ConfigDir ($OPENCODE_CONFIG_DIR/dcp.jsonc)
+ *   3. Project config (.opencode/dcp.jsonc)
+ *
+ * Each layer overrides the previous. Returns the fully merged config.
+ */
 export function getConfig(ctx: PluginInput): PluginConfig {
     let config = deepCloneConfig(defaultConfig)
     const configPaths = getConfigPaths(ctx)
@@ -1127,6 +1144,18 @@ export function getConfig(ctx: PluginInput): PluginConfig {
     return config
 }
 
+/**
+ * Resolve a compress field by walking the provider/model hierarchy.
+ *
+ * Resolution order (first match wins):
+ *   1. Exact provider > exact model
+ *   2. Exact provider > wildcard model (`*`)
+ *   3. Wildcard provider (`*`) > exact model
+ *   4. Wildcard provider (`*`) > wildcard model (`*`)
+ *   5. Exact provider (no model)
+ *   6. Wildcard provider (`*`) (no model)
+ *   7. `undefined` (caller falls back to global default)
+ */
 export function getResolvedCompressValue<T>(
     config: PluginConfig,
     providerId: string | undefined,
