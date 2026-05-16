@@ -255,3 +255,42 @@ test("isContextOverLimits picks exact provider over wildcard", () => {
     assert.equal(result.overMinLimit, false)
     assert.equal(result.overMaxLimit, false)
 })
+
+test("opencode-go deepseek-v4-flash real-world config with 1M context", () => {
+    const state = createSessionState()
+    state.modelContextLimit = 1_000_000
+
+    const config = baseConfig({
+        "opencode-go": {
+            maxContextLimit: "90%",
+            minContextLimit: "10%",
+        },
+    })
+
+    const messages: WithParts[] = [
+        userMessage("msg-user", "ses_real", "create a full project scaffold with ci", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
+        assistantMessage("msg-assistant", "ses_real", "here is the project scaffold with all files", { input: 15_000, output: 3_200 }),
+    ]
+
+    const belowMin = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", messages)
+    assert.equal(belowMin.overMinLimit, false, "15K tokens should be well below 10% of 1M (100K)")
+    assert.equal(belowMin.overMaxLimit, false, "15K tokens should be below 90% of 1M (900K)")
+
+    const nearMaxTokens: WithParts[] = [
+        userMessage("msg-user", "ses_real", "continue working", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
+        assistantMessage("msg-assistant", "ses_real", "continuing with more code changes", { input: 850_000, output: 15_000 }),
+    ]
+
+    const nearMax = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", nearMaxTokens)
+    assert.equal(nearMax.overMinLimit, true, "850K input should be above 10% min (100K)")
+    assert.equal(nearMax.overMaxLimit, false, "850K input should still be below 90% max (900K)")
+
+    const overMaxTokens: WithParts[] = [
+        userMessage("msg-user", "ses_real", "one more task", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
+        assistantMessage("msg-assistant", "ses_real", "doing one more thing", { input: 920_000, output: 10_000 }),
+    ]
+
+    const overMax = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", overMaxTokens)
+    assert.equal(overMax.overMinLimit, true, "920K should be above 10% min (100K)")
+    assert.equal(overMax.overMaxLimit, true, "920K should exceed 90% max (900K)")
+})
