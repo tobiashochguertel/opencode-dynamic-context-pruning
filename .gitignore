@@ -17,6 +17,9 @@ npm-debug.log*
 # E2E test environment (contains API keys)
 tests/e2e/.env
 
+# E2E test setup notes (personal tracking)
+tests/e2e/SETUP_NOTES.md
+
 # OS files
 .DS_Store
 Thumbs.db

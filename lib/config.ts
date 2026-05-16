@@ -1106,11 +1106,6 @@ export function getResolvedCompressValue<T>(
     }
 
     if (providerId && modelId && compress.providers) {
-        const wildcardModel = compress.providers["*"]?.models?.[modelId]
-        if (wildcardModel && field in wildcardModel) {
-            return extract(wildcardModel)
-        }
-
         const exactProvider = compress.providers[providerId]
         if (exactProvider) {
             const exactModel = exactProvider.models?.[modelId]
@@ -1121,23 +1116,23 @@ export function getResolvedCompressValue<T>(
 
         const wildcardProvider = compress.providers["*"]
         if (wildcardProvider) {
-            const wildcardModelInner = wildcardProvider.models?.[modelId]
-            if (wildcardModelInner && field in wildcardModelInner) {
-                return extract(wildcardModelInner)
+            const wildcardModel = wildcardProvider.models?.[modelId]
+            if (wildcardModel && field in wildcardModel) {
+                return extract(wildcardModel)
             }
         }
     }
 
     if (providerId && compress.providers) {
+        const exactProvider = compress.providers[providerId]
+        if (exactProvider && field in exactProvider) {
+            return extract(exactProvider)
+        }
+
         const wildcardProviderVal = compress.providers["*"]
         if (wildcardProviderVal && field in wildcardProviderVal) {
             const val = extract(wildcardProviderVal)
             return val as T
-        }
-
-        const exactProvider = compress.providers[providerId]
-        if (exactProvider && field in exactProvider) {
-            return extract(exactProvider)
         }
     }
 
