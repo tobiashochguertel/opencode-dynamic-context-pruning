@@ -921,48 +921,6 @@ function mergeProviderOverrides(
     return merged
 }
 
-function mergeCompress(
-    base: PluginConfig["compress"],
-    override?: Partial<PluginConfig["compress"]>,
-): PluginConfig["compress"] {
-    if (!override) {
-        return base
-    }
-
-    const mergedProviders: Record<string, ProviderOverrides> = {}
-    if (override.providers) {
-        for (const [providerId, providerOverrides] of Object.entries(override.providers)) {
-            if (providerOverrides && typeof providerOverrides === "object") {
-                mergedProviders[providerId] = mergeProviderOverrides(base, providerOverrides)
-            }
-        }
-    }
-
-    const baseProviders = base.providers ? { ...base.providers } : undefined
-    const finalProviders = baseProviders || mergedProviders
-    if (Object.keys(mergedProviders).length > 0) {
-        for (const [key, val] of Object.entries(mergedProviders)) {
-            finalProviders[key] = val
-        }
-    }
-
-    return {
-        mode: override.mode ?? base.mode,
-        permission: override.permission ?? base.permission,
-        showCompression: override.showCompression ?? base.showCompression,
-        summaryBuffer: override.summaryBuffer ?? base.summaryBuffer,
-        maxContextLimit: override.maxContextLimit ?? base.maxContextLimit,
-        minContextLimit: override.minContextLimit ?? base.minContextLimit,
-        nudgeFrequency: override.nudgeFrequency ?? base.nudgeFrequency,
-        iterationNudgeThreshold: override.iterationNudgeThreshold ?? base.iterationNudgeThreshold,
-        nudgeForce: override.nudgeForce ?? base.nudgeForce,
-        protectedTools: [...new Set([...base.protectedTools, ...(override.protectedTools ?? [])])],
-        protectTags: override.protectTags ?? base.protectTags,
-        protectUserMessages: override.protectUserMessages ?? base.protectUserMessages,
-        providers: Object.keys(finalProviders).length > 0 ? finalProviders : undefined,
-    }
-}
-
 function mergeCommands(
     base: PluginConfig["commands"],
     override?: Partial<PluginConfig["commands"]>,
@@ -1001,7 +959,7 @@ function mergeExperimental(
     }
 }
 
-function deepCloneConfig(config: PluginConfig): PluginConfig {
+export function deepCloneConfig(config: PluginConfig): PluginConfig {
     return {
         ...config,
         commands: {
@@ -1032,6 +990,63 @@ function deepCloneConfig(config: PluginConfig): PluginConfig {
                 protectedTools: [...config.strategies.purgeErrors.protectedTools],
             },
         },
+    }
+}
+
+export function mergeCompress(
+    base: PluginConfig["compress"],
+    override?: Partial<PluginConfig["compress"]>,
+): PluginConfig["compress"] {
+    if (!override) {
+        return base
+    }
+
+    const baseProviders: Record<string, ProviderOverrides> = base.providers
+        ? { ...base.providers }
+        : {}
+
+    if (override.providers) {
+        for (const [providerId, providerOverrides] of Object.entries(override.providers)) {
+            if (providerOverrides && typeof providerOverrides === "object") {
+                const baseOverrides = baseProviders?.[providerId]
+                const merged = mergeProviderOverrides(base, providerOverrides)
+
+                if (baseOverrides) {
+                    for (const [k, v] of Object.entries(baseOverrides)) {
+                        if (k === "models") continue
+                        if (!(k in merged) || merged[k as keyof ProviderOverrides] === undefined) {
+                            (merged as any)[k] = v
+                        }
+                    }
+                    if (baseOverrides.models) {
+                        merged.models = {
+                            ...baseOverrides.models,
+                            ...merged.models,
+                        }
+                    }
+                }
+
+                baseProviders[providerId] = merged
+            }
+        }
+    }
+
+    const finalProviders = Object.keys(baseProviders).length > 0 ? baseProviders : undefined
+
+    return {
+        mode: override.mode ?? base.mode,
+        permission: override.permission ?? base.permission,
+        showCompression: override.showCompression ?? base.showCompression,
+        summaryBuffer: override.summaryBuffer ?? base.summaryBuffer,
+        maxContextLimit: override.maxContextLimit ?? base.maxContextLimit,
+        minContextLimit: override.minContextLimit ?? base.minContextLimit,
+        nudgeFrequency: override.nudgeFrequency ?? base.nudgeFrequency,
+        iterationNudgeThreshold: override.iterationNudgeThreshold ?? base.iterationNudgeThreshold,
+        nudgeForce: override.nudgeForce ?? base.nudgeForce,
+        protectedTools: [...new Set([...base.protectedTools, ...(override.protectedTools ?? [])])],
+        protectTags: override.protectTags ?? base.protectTags,
+        protectUserMessages: override.protectUserMessages ?? base.protectUserMessages,
+        providers: finalProviders && Object.keys(finalProviders).length > 0 ? finalProviders : undefined,
     }
 }
 
