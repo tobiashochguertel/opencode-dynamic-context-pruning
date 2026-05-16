@@ -132,14 +132,17 @@ Full integration tests with realistic context windows and percentage limits.
 
 ## Implementation Status
 
-| Test Range | Count | Status |
-|---|---|---|
-| Resolution order (1–10) | 10 | ✅ covered in unit test |
-| All override fields (11–22) | 12 | partial (tested via provider/model level, not each field) |
-| Real-world configs (23–40) | 18 | partial (deepseek only) |
-| Wildcard (41–46) | 6 | ✅ covered |
-| Inheritance (47–50) | 4 | partial (implicitly tested) |
-| Edge cases (51–57) | 7 | ❌ not tested |
-| Nudge pipeline (58–60) | 3 | ❌ not tested |
-| Validation (61–65) | 5 | ❌ not tested |
-| Backward compat (66–67) | 2 | ❌ not tested |
+| Layer merge (global→project) | 3 | ✅ covered (providers merge cross-layer, project overrides global) | `tests/integration/hierarchical-config-layer-merge.test.ts` |
+| Config key path recursion | 2 | ✅ covered (providers and modelMaxLimits skipped) | `tests/unit/hierarchical-config-override-fields.test.ts` |
+| Null/undefined safety | 2 | ✅ covered (providers null or undefined does not throw) | `tests/unit/hierarchical-config-override-fields.test.ts` |
+| Test Range | Count | Status | Files |
+|---|---|---|---|---|
+| Resolution order (1–10) | 10 | ✅ covered | `tests/unit/hierarchical-config.test.ts` |
+| All override fields (11–22) | 12 | ✅ covered (each of 12 fields at both provider and model level, plus 4 structural tests) | `tests/unit/hierarchical-config-override-fields.test.ts` |
+| Real-world configs (23–40) | 18 | ✅ covered (deepseek-v4-flash/pro, qwen3-6-plus/3-5-plus, kimi-k2-5, gemini-3-pro, claude-sonnet-4-6, gpt-5.3-codex) | `tests/integration/hierarchical-config-real-world.test.ts` |
+| Wildcard (41–46) | 6 | ✅ covered | `tests/unit/hierarchical-config.test.ts`, `tests/unit/hierarchical-config-edge-cases.test.ts` |
+| Inheritance (47–50) | 4 | ✅ covered (empty model inherits provider, empty provider inherits global, additive protectedTools) | `tests/unit/hierarchical-config-edge-cases.test.ts` |
+| Edge cases (51–57) | 7 | ✅ covered (no model info, empty provider, empty model, zero providers, unknown field, wildcard-only) | `tests/unit/hierarchical-config-edge-cases.test.ts` |
+| Nudge pipeline (58–60) | 3 | ✅ covered (getModelInfo, getNudgeFrequency, getIterationNudgeThreshold, isContextOverLimits with model info) | `tests/integration/hierarchical-config-nudge-pipeline.test.ts` |
+| Validation (61–65) | 5 | ✅ covered (non-object, invalid nudge, invalid permission, invalid percent pattern, non-object model) | `tests/unit/hierarchical-config-validation.test.ts` |
+| Backward compat (66–67) | 2 | ✅ covered (modelMaxLimits and modelMinLimits accepted without unknown-key error) | `tests/unit/hierarchical-config-validation.test.ts` |
