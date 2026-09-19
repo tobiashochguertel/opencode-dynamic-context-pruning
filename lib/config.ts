@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "fs
 import { join, dirname } from "path"
 import { homedir } from "os"
 import { parse } from "jsonc-parser"
-import type { PluginInput } from "@opencode-ai/plugin"
+import type { PluginHost } from "./v2/host"
 
 type Permission = "ask" | "allow" | "deny"
 type CompressMode = "range" | "message"
@@ -675,7 +675,7 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
 }
 
 function showConfigWarnings(
-    ctx: PluginInput,
+    ctx: PluginHost,
     configPath: string,
     configData: Record<string, any>,
     isProject: boolean,
@@ -707,14 +707,10 @@ function showConfigWarnings(
 
     setTimeout(() => {
         try {
-            ctx.client.tui.showToast({
-                body: {
-                    title: `DCP: ${configType} warning`,
-                    message: `${configPath}\n${messages.join("\n")}`,
-                    variant: "warning",
-                    duration: 7000,
-                },
-            })
+            ctx.notify(
+                `DCP: ${configType} warning`,
+                `${configPath}\n${messages.join("\n")}`,
+            )
         } catch {}
     }, 7000)
 }
@@ -791,7 +787,7 @@ function findOpencodeDir(startDir: string): string | null {
     return null
 }
 
-function getConfigPaths(ctx?: PluginInput): {
+function getConfigPaths(ctx?: PluginHost): {
     global: string | null
     configDir: string | null
     project: string | null
@@ -1081,17 +1077,10 @@ function mergeLayer(config: PluginConfig, data: Record<string, any>): PluginConf
     }
 }
 
-function scheduleParseWarning(ctx: PluginInput, title: string, message: string): void {
+function scheduleParseWarning(ctx: PluginHost, title: string, message: string): void {
     setTimeout(() => {
         try {
-            ctx.client.tui.showToast({
-                body: {
-                    title,
-                    message,
-                    variant: "warning",
-                    duration: 7000,
-                },
-            })
+            ctx.notify(title, message)
         } catch {}
     }, 7000)
 }
@@ -1104,7 +1093,7 @@ function scheduleParseWarning(ctx: PluginInput, title: string, message: string):
  *
  * Each layer overrides the previous. Returns the fully merged config.
  */
-export function getConfig(ctx: PluginInput): PluginConfig {
+export function getConfig(ctx: PluginHost): PluginConfig {
     let config = deepCloneConfig(defaultConfig)
     const configPaths = getConfigPaths(ctx)
 

@@ -12,14 +12,12 @@ import type { SearchContext } from "./types"
 import { applyPendingCompressionDurations } from "./timing"
 
 interface RunContext {
-    ask(input: {
-        permission: string
-        patterns: string[]
-        always: string[]
-        metadata: Record<string, unknown>
-    }): Promise<void>
-    metadata(input: { title: string }): void
+    /** V2 tool context: call id (V1 `callID`). */
+    id?: string
+    /** V2 tool context: progress/metadata updates (V1 `metadata()`). */
+    progress?(input: Record<string, unknown>): Promise<void> | void
     sessionID: string
+    messageID: string
 }
 
 export interface NotificationEntry {
@@ -45,14 +43,10 @@ export async function prepareSession(
         )
     }
 
-    await toolCtx.ask({
-        permission: "compress",
-        patterns: ["*"],
-        always: ["*"],
-        metadata: {},
-    })
-
-    toolCtx.metadata({ title })
+    // V1 called toolCtx.ask({permission: "compress"}) here. In V2 the
+    // permission is enforced declaratively via the tool's
+    // `options.permission` + the permission.evaluate hook.
+    await toolCtx.progress?.({ title })
 
     const rawMessages = await fetchSessionMessages(ctx.client, toolCtx.sessionID)
 

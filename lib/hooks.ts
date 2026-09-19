@@ -10,7 +10,6 @@ import {
     injectMessageIds,
     prune,
     stripHallucinations,
-    stripHallucinationsFromString,
     stripStaleMetadata,
     syncCompressionBlocks,
 } from "./messages"
@@ -274,95 +273,67 @@ export function createCommandExecuteHandler(
     }
 }
 
-export function createTextCompleteHandler() {
-    return async (
-        _input: { sessionID: string; messageID: string; partID: string },
-        output: { text: string },
-    ) => {
-        output.text = stripHallucinationsFromString(output.text)
+/**
+ * V2 compression-timing hooks.
+ *
+ * V1 scraped `message.part.updated` events; V2 exposes tool lifecycle hooks
+ * directly, which is simpler and more reliable. `onBefore` records the start
+ * timestamp for a `compress` call; `onAfter` resolves the duration and
+ * attaches it to the pending compression blocks.
+ */
+export function createCompressTimingHooks(state: SessionState, logger: Logger) {
+    const isCompress = (event: { tool?: unknown }) => event.tool === "compress"
+
+    const onBefore = (event: { tool: string; id: string; messageID: string }) => {
+        if (!isCompress(event)) return
+        const startedAt = Date.now()
+        const key = buildCompressionTimingKey(event.messageID, event.id)
+        if (state.compressionTiming.startsByCallId.has(key)) return
+        state.compressionTiming.startsByCallId.set(key, startedAt)
+        logger.debug("Recorded compression start", {
+            messageID: event.messageID,
+            callID: event.id,
+            startedAt,
+        })
     }
-}
 
-export function createEventHandler(state: SessionState, logger: Logger) {
-    return async (input: { event: any }) => {
-        const eventTime =
-            typeof input.event?.time === "number" && Number.isFinite(input.event.time)
-                ? input.event.time
-                : typeof input.event?.properties?.time === "number" &&
-                    Number.isFinite(input.event.properties.time)
-                  ? input.event.properties.time
-                  : undefined
-
-        if (input.event.type !== "message.part.updated") {
-            return
-        }
-
-        const part = input.event.properties?.part
-        if (part?.type !== "tool" || part.tool !== "compress") {
-            return
-        }
-
-        if (part.state.status === "pending") {
-            if (typeof part.callID !== "string" || typeof part.messageID !== "string") {
-                return
-            }
-
-            const startedAt = eventTime ?? Date.now()
-            const key = buildCompressionTimingKey(part.messageID, part.callID)
-            if (state.compressionTiming.startsByCallId.has(key)) {
-                return
-            }
-            state.compressionTiming.startsByCallId.set(key, startedAt)
-            logger.debug("Recorded compression start", {
-                messageID: part.messageID,
-                callID: part.callID,
-                startedAt,
-            })
-            return
-        }
-
-        if (part.state.status === "completed") {
-            if (typeof part.callID !== "string" || typeof part.messageID !== "string") {
-                return
-            }
-
-            const key = buildCompressionTimingKey(part.messageID, part.callID)
-            const start = consumeCompressionStart(state, part.messageID, part.callID)
-            const durationMs = resolveCompressionDuration(start, eventTime, part.state.time)
-            if (typeof durationMs !== "number") {
-                return
-            }
-
-            state.compressionTiming.pendingByCallId.set(key, {
-                messageId: part.messageID,
-                callId: part.callID,
-                durationMs,
-            })
-
-            const updates = applyPendingCompressionDurations(state)
-            if (updates === 0) {
-                return
-            }
-
-            await saveSessionState(state, logger)
-
-            logger.info("Attached compression time to blocks", {
-                messageID: part.messageID,
-                callID: part.callID,
-                blocks: updates,
-                durationMs,
-            })
-            return
-        }
-
-        if (part.state.status === "running") {
-            return
-        }
-
-        if (typeof part.callID === "string" && typeof part.messageID === "string") {
+    const onAfter = async (event: {
+        tool: string
+        id: string
+        messageID: string
+        status: "completed" | "error"
+    }) => {
+        if (!isCompress(event)) return
+        if (event.status !== "completed") {
             state.compressionTiming.startsByCallId.delete(
-                buildCompressionTimingKey(part.messageID, part.callID),
+                buildCompressionTimingKey(event.messageID, event.id),
             )
+            return
         }
+
+        const key = buildCompressionTimingKey(event.messageID, event.id)
+        const start = consumeCompressionStart(state, event.messageID, event.id)
+        const durationMs = resolveCompressionDuration(start, Date.now(), undefined)
+        if (typeof durationMs !== "number") return
+
+        state.compressionTiming.pendingByCallId.set(key, {
+            messageId: event.messageID,
+            callId: event.id,
+            durationMs,
+        })
+
+        const updates = applyPendingCompressionDurations(state)
+        if (updates === 0) return
+
+        await saveSessionState(state, logger)
+
+        logger.info("Attached compression time to blocks", {
+            messageID: event.messageID,
+            callID: event.id,
+            blocks: updates,
+            durationMs,
+        })
     }
+
+    return { onBefore, onAfter }
 }

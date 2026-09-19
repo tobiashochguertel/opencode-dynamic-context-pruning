@@ -1,7 +1,7 @@
 import { readFile, rm } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { PluginInput } from "@opencode-ai/plugin"
+import type { PluginHost } from "./v2/host"
 
 type PackageJson = {
     name?: string
@@ -16,7 +16,7 @@ type UpdateResult =
 
 const PACKAGE_NAME = "@tarquinen/opencode-dcp"
 
-export function startAutoUpdate(ctx: PluginInput, enabled: boolean): void {
+export function startAutoUpdate(ctx: PluginHost, enabled: boolean): void {
     if (!enabled) return
 
     const controller = new AbortController()
@@ -25,14 +25,10 @@ export function startAutoUpdate(ctx: PluginInput, enabled: boolean): void {
         .then((result) => {
             if (!result.updated) return
             setTimeout(() => {
-                ctx.client.tui.showToast({
-                    body: {
-                        title: "DCP update ready",
-                        message: `Updated ${result.name} from ${result.current} to ${result.latest}. Restart OpenCode to finish.`,
-                        variant: "info",
-                        duration: 7000,
-                    },
-                })
+                ctx.notify(
+                    "DCP update ready",
+                    `Updated ${result.name} from ${result.current} to ${result.latest}. Restart OpenCode to finish.`,
+                )
             }, 5000)
         })
         .catch(() => {})

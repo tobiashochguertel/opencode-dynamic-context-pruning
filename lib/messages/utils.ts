@@ -64,8 +64,8 @@ export const createSyntheticTextPart = (
 }
 
 type MessagePart = WithParts["parts"][number]
-type ToolPart = Extract<MessagePart, { type: "tool" }>
-type TextPart = Extract<MessagePart, { type: "text" }>
+type ToolPart = Record<string, any>
+type TextPart = Record<string, any>
 
 export const appendToLastTextPart = (message: WithParts, injection: string): boolean => {
     const textPart = findLastTextPart(message)

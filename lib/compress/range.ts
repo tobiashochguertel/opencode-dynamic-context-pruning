@@ -1,5 +1,5 @@
-import { tool } from "@opencode-ai/plugin"
-import type { ToolContext } from "./types"
+import { z } from "zod"
+import type { CompressTool, ToolContext } from "./types"
 import { countTokens } from "../token-utils"
 import { RANGE_FORMAT_EXTENSION } from "../prompts/extensions/tool"
 import { finalizeSession, prepareSession, type NotificationEntry } from "./pipeline"
@@ -28,21 +28,21 @@ import type { CompressRangeToolArgs } from "./types"
 
 function buildSchema() {
     return {
-        topic: tool.schema
+        topic: z
             .string()
             .describe("Short label (3-5 words) for display - e.g., 'Auth System Exploration'"),
-        content: tool.schema
+        content: z
             .array(
-                tool.schema.object({
-                    startId: tool.schema
+                z.object({
+                    startId: z
                         .string()
                         .describe(
                             "Message or block ID marking the beginning of range (e.g. m0001, b2)",
                         ),
-                    endId: tool.schema
+                    endId: z
                         .string()
                         .describe("Message or block ID marking the end of range (e.g. m0012, b5)"),
-                    summary: tool.schema
+                    summary: z
                         .string()
                         .describe("Complete technical summary replacing all content in range"),
                 }),
@@ -53,19 +53,21 @@ function buildSchema() {
     }
 }
 
-export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof tool> {
+export function createCompressRangeTool(ctx: ToolContext): CompressTool {
     ctx.prompts.reload()
     const runtimePrompts = ctx.prompts.getRuntimePrompts()
 
-    return tool({
+    return {
+        name: "compress",
+        options: { permission: "compress" },
         description: runtimePrompts.compressRange + RANGE_FORMAT_EXTENSION,
-        args: buildSchema(),
-        async execute(args, toolCtx) {
+        input: z.object(buildSchema()),
+        async execute(args: any, toolCtx: any) {
             const input = args as CompressRangeToolArgs
             validateArgs(input)
             const callId =
-                typeof (toolCtx as unknown as { callID?: unknown }).callID === "string"
-                    ? (toolCtx as unknown as { callID: string }).callID
+                typeof (toolCtx as unknown as { id?: unknown }).id === "string"
+                    ? (toolCtx as unknown as { id: string }).id
                     : undefined
 
             const { rawMessages, searchContext } = await prepareSession(
@@ -186,7 +188,7 @@ export function createCompressRangeTool(ctx: ToolContext): ReturnType<typeof too
 
             await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 
-            return `Compressed ${totalCompressedMessages} messages into ${COMPRESSED_BLOCK_HEADER}.`
+            return { content: `Compressed ${totalCompressedMessages} messages into ${COMPRESSED_BLOCK_HEADER}.` }
         },
-    })
+    }
 }

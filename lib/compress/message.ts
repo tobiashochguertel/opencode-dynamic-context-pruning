@@ -1,5 +1,5 @@
-import { tool } from "@opencode-ai/plugin"
-import type { ToolContext } from "./types"
+import { z } from "zod"
+import type { CompressTool, ToolContext } from "./types"
 import { countTokens } from "../token-utils"
 import { MESSAGE_FORMAT_EXTENSION } from "../prompts/extensions/tool"
 import { formatIssues, formatResult, resolveMessages, validateArgs } from "./message-utils"
@@ -15,21 +15,21 @@ import type { CompressMessageToolArgs } from "./types"
 
 function buildSchema() {
     return {
-        topic: tool.schema
+        topic: z
             .string()
             .describe(
                 "Short label (3-5 words) for the overall batch - e.g., 'Closed Research Notes'",
             ),
-        content: tool.schema
+        content: z
             .array(
-                tool.schema.object({
-                    messageId: tool.schema
+                z.object({
+                    messageId: z
                         .string()
                         .describe("Raw message ID to compress (e.g. m0001)"),
-                    topic: tool.schema
+                    topic: z
                         .string()
                         .describe("Short label (3-5 words) for this one message summary"),
-                    summary: tool.schema
+                    summary: z
                         .string()
                         .describe("Complete technical summary replacing that one message"),
                 }),
@@ -38,19 +38,21 @@ function buildSchema() {
     }
 }
 
-export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof tool> {
+export function createCompressMessageTool(ctx: ToolContext): CompressTool {
     ctx.prompts.reload()
     const runtimePrompts = ctx.prompts.getRuntimePrompts()
 
-    return tool({
+    return {
+        name: "compress",
+        options: { permission: "compress" },
         description: runtimePrompts.compressMessage + MESSAGE_FORMAT_EXTENSION,
-        args: buildSchema(),
-        async execute(args, toolCtx) {
+        input: z.object(buildSchema()),
+        async execute(args: any, toolCtx: any) {
             const input = args as CompressMessageToolArgs
             validateArgs(input)
             const callId =
-                typeof (toolCtx as unknown as { callID?: unknown }).callID === "string"
-                    ? (toolCtx as unknown as { callID: string }).callID
+                typeof (toolCtx as unknown as { id?: unknown }).id === "string"
+                    ? (toolCtx as unknown as { id: string }).id
                     : undefined
 
             const { rawMessages, searchContext } = await prepareSession(
@@ -139,7 +141,7 @@ export function createCompressMessageTool(ctx: ToolContext): ReturnType<typeof t
 
             await finalizeSession(ctx, toolCtx, rawMessages, notifications, input.topic)
 
-            return formatResult(plans.length, skippedIssues, skippedCount)
+            return { content: formatResult(plans.length, skippedIssues, skippedCount) }
         },
-    })
+    }
 }

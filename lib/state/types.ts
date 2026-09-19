@@ -1,9 +1,14 @@
 import type { CompressionTimingState } from "../compress/timing"
-import { Message, Part } from "@opencode-ai/sdk/v2"
 
+/**
+ * Engine-facing message shape. V1 used the SDK's `Message`/`Part` unions
+ * directly; the V2 adapter synthesizes these objects, so they are structural
+ * records carrying the fields the engine reads (info.id/role/sessionID/
+ * time/tokens/…, part.type/callID/tool/state/text/metadata/…).
+ */
 export interface WithParts {
-    info: Message
-    parts: Part[]
+    info: Record<string, any>
+    parts: Array<Record<string, any>>
 }
 
 export type ToolStatus = "pending" | "running" | "completed" | "error"

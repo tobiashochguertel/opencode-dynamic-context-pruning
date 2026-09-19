@@ -106,3 +106,15 @@ export interface CompressionStateInput {
     compressCallId?: string
     summaryTokens: number
 }
+
+/**
+ * V2 tool definition shape (subset of `@opencode/plugin`'s `Tool.Info` in its
+ * promise adapter). The tool is registered via `ctx.tool.transform`.
+ */
+export interface CompressTool {
+    name: string
+    description: string
+    input: unknown
+    options?: { permission?: string }
+    execute: (input: any, toolCtx: any) => Promise<{ content?: string; metadata?: Record<string, unknown> }>
+}
