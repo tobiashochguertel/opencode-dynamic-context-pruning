@@ -122,7 +122,6 @@ git_status_report.yaml
 git_status_report_after_cleanup.yaml
 htmlcov/
 lerna-debug.log*
-lib/
 lib64/
 log/
 logs/
