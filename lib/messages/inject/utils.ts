@@ -40,9 +40,7 @@ export function getNudgeFrequency(
     providerId?: string,
     modelId?: string,
 ): number {
-    const resolved = getResolvedCompressValue<number>(
-        config, providerId, modelId, "nudgeFrequency",
-    )
+    const resolved = getResolvedCompressValue<number>(config, providerId, modelId, "nudgeFrequency")
     return Math.max(1, Math.floor(resolved ?? config.compress.nudgeFrequency))
 }
 
@@ -52,7 +50,10 @@ export function getIterationNudgeThreshold(
     modelId?: string,
 ): number {
     const resolved = getResolvedCompressValue<number>(
-        config, providerId, modelId, "iterationNudgeThreshold",
+        config,
+        providerId,
+        modelId,
+        "iterationNudgeThreshold",
     )
     return Math.max(1, Math.floor(resolved ?? config.compress.iterationNudgeThreshold))
 }

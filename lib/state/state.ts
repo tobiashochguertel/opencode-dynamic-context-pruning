@@ -1,7 +1,7 @@
 import type { SessionState, ToolParameterEntry, WithParts } from "./types"
 import type { Logger } from "../logger"
 import { applyPendingCompressionDurations } from "../compress/timing"
-import { loadSessionState, saveSessionState } from "./persistence"
+import { loadManualModeSetting, loadSessionState, saveSessionState } from "./persistence"
 import {
     isSubAgentSession,
     findLastCompactionTimestamp,
@@ -13,6 +13,7 @@ import {
     collectTurnNudgeAnchors,
 } from "./utils"
 import { getLastUserMessage } from "../messages/query"
+import type { IdFormat } from "../message-ids"
 
 export const checkSession = async (
     client: any,
@@ -60,10 +61,12 @@ export const checkSession = async (
     }
 
     state.currentTurn = countTurns(state, messages)
+    await refreshManualMode(state, lastSessionId, logger, manualModeDefault)
 }
 
-export function createSessionState(): SessionState {
+export function createSessionState(idFormat: IdFormat = "xml"): SessionState {
     return {
+        idFormat,
         sessionId: null,
         isSubAgent: false,
         manualMode: false,
@@ -166,6 +169,10 @@ export async function ensureSessionInitialized(
         return
     }
 
+    if (typeof persisted.manualMode === "boolean") {
+        state.manualMode = persisted.manualMode ? "active" : false
+    }
+
     state.prune.tools = loadPruneMap(persisted.prune.tools)
     state.prune.messages = loadPruneMessagesState(persisted.prune.messages)
     state.nudges.contextLimitAnchors = new Set<string>(persisted.nudges.contextLimitAnchors || [])
@@ -185,4 +192,19 @@ export async function ensureSessionInitialized(
     if (applied > 0) {
         await saveSessionState(state, logger)
     }
+}
+
+export async function refreshManualMode(
+    state: SessionState,
+    sessionId: string,
+    logger: Logger,
+    manualModeDefault: boolean,
+): Promise<void> {
+    if (state.manualMode === "compress-pending") {
+        return
+    }
+
+    const persisted = await loadManualModeSetting(sessionId, logger)
+    const enabled = persisted ?? manualModeDefault
+    state.manualMode = enabled ? "active" : false
 }

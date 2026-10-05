@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import type { PluginConfig } from "../../lib/config"
-import { getNudgeFrequency, getIterationNudgeThreshold, isContextOverLimits } from "../../lib/messages/inject/utils"
+import {
+    getNudgeFrequency,
+    getIterationNudgeThreshold,
+    isContextOverLimits,
+} from "../../lib/messages/inject/utils"
 import { getCurrentTokenUsage } from "../../lib/token-utils"
 import { createSessionState, type WithParts } from "../../lib/state"
 
@@ -49,7 +53,12 @@ function modelInfo(providerID: string, modelID: string, contextLimit: number) {
     }
 }
 
-function userMessage(id: string, sessionID: string, text: string, model: Record<string, any>): WithParts {
+function userMessage(
+    id: string,
+    sessionID: string,
+    text: string,
+    model: Record<string, any>,
+): WithParts {
     return {
         info: {
             id,
@@ -63,7 +72,12 @@ function userMessage(id: string, sessionID: string, text: string, model: Record<
     }
 }
 
-function assistantMessage(id: string, sessionID: string, text: string, tokens?: { input: number; output: number }): WithParts {
+function assistantMessage(
+    id: string,
+    sessionID: string,
+    text: string,
+    tokens?: { input: number; output: number },
+): WithParts {
     return {
         info: {
             id,
@@ -154,7 +168,12 @@ test("isContextOverLimits uses provider-level maxContextLimit override", () => {
     })
 
     const messages: WithParts[] = [
-        userMessage("msg-user", "ses_hier", "hello", modelInfo("opencode-go", "deepseek-v4-flash", 200000)),
+        userMessage(
+            "msg-user",
+            "ses_hier",
+            "hello",
+            modelInfo("opencode-go", "deepseek-v4-flash", 200000),
+        ),
         assistantMessage("msg-assistant", "ses_hier", "hi there"),
     ]
 
@@ -177,7 +196,12 @@ test("isContextOverLimits uses model-level override above provider", () => {
     })
 
     const messages: WithParts[] = [
-        userMessage("msg-user", "ses_hier", "hello", modelInfo("opencode-go", "deepseek-v4-flash", 200000)),
+        userMessage(
+            "msg-user",
+            "ses_hier",
+            "hello",
+            modelInfo("opencode-go", "deepseek-v4-flash", 200000),
+        ),
         assistantMessage("msg-assistant", "ses_hier", "hi there", { input: 30, output: 5 }),
     ]
 
@@ -185,7 +209,11 @@ test("isContextOverLimits uses model-level override above provider", () => {
     assert.ok(totalTokens > 0, "should have token count")
 
     const result = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", messages)
-    assert.equal(result.overMaxLimit, true, "model max limit 10 should be exceeded by reported tokens")
+    assert.equal(
+        result.overMaxLimit,
+        true,
+        "model max limit 10 should be exceeded by reported tokens",
+    )
 })
 
 test("isContextOverLimits ignores provider overrides for different provider", () => {
@@ -228,7 +256,11 @@ test("isContextOverLimits applies wildcard provider to any provider", () => {
     assert.ok(totalTokens > 0, "should have token count")
 
     const result = isContextOverLimits(config, state, "unknown", "unknown-model", messages)
-    assert.equal(result.overMaxLimit, true, "wildcard max limit 10 should be exceeded by reported tokens")
+    assert.equal(
+        result.overMaxLimit,
+        true,
+        "wildcard max limit 10 should be exceeded by reported tokens",
+    )
 })
 
 test("isContextOverLimits picks exact provider over wildcard", () => {
@@ -247,7 +279,12 @@ test("isContextOverLimits picks exact provider over wildcard", () => {
     })
 
     const messages: WithParts[] = [
-        userMessage("msg-user", "ses_hier", "hello", modelInfo("opencode-go", "deepseek-v4-flash", 200000)),
+        userMessage(
+            "msg-user",
+            "ses_hier",
+            "hello",
+            modelInfo("opencode-go", "deepseek-v4-flash", 200000),
+        ),
         assistantMessage("msg-assistant", "ses_hier", "hi there"),
     ]
 
@@ -268,29 +305,73 @@ test("opencode-go deepseek-v4-flash real-world config with 1M context", () => {
     })
 
     const messages: WithParts[] = [
-        userMessage("msg-user", "ses_real", "create a full project scaffold with ci", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
-        assistantMessage("msg-assistant", "ses_real", "here is the project scaffold with all files", { input: 15_000, output: 3_200 }),
+        userMessage(
+            "msg-user",
+            "ses_real",
+            "create a full project scaffold with ci",
+            modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000),
+        ),
+        assistantMessage(
+            "msg-assistant",
+            "ses_real",
+            "here is the project scaffold with all files",
+            { input: 15_000, output: 3_200 },
+        ),
     ]
 
-    const belowMin = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", messages)
+    const belowMin = isContextOverLimits(
+        config,
+        state,
+        "opencode-go",
+        "deepseek-v4-flash",
+        messages,
+    )
     assert.equal(belowMin.overMinLimit, false, "15K tokens should be well below 10% of 1M (100K)")
     assert.equal(belowMin.overMaxLimit, false, "15K tokens should be below 90% of 1M (900K)")
 
     const nearMaxTokens: WithParts[] = [
-        userMessage("msg-user", "ses_real", "continue working", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
-        assistantMessage("msg-assistant", "ses_real", "continuing with more code changes", { input: 850_000, output: 15_000 }),
+        userMessage(
+            "msg-user",
+            "ses_real",
+            "continue working",
+            modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000),
+        ),
+        assistantMessage("msg-assistant", "ses_real", "continuing with more code changes", {
+            input: 850_000,
+            output: 15_000,
+        }),
     ]
 
-    const nearMax = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", nearMaxTokens)
+    const nearMax = isContextOverLimits(
+        config,
+        state,
+        "opencode-go",
+        "deepseek-v4-flash",
+        nearMaxTokens,
+    )
     assert.equal(nearMax.overMinLimit, true, "850K input should be above 10% min (100K)")
     assert.equal(nearMax.overMaxLimit, false, "850K input should still be below 90% max (900K)")
 
     const overMaxTokens: WithParts[] = [
-        userMessage("msg-user", "ses_real", "one more task", modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000)),
-        assistantMessage("msg-assistant", "ses_real", "doing one more thing", { input: 920_000, output: 10_000 }),
+        userMessage(
+            "msg-user",
+            "ses_real",
+            "one more task",
+            modelInfo("opencode-go", "deepseek-v4-flash", 1_000_000),
+        ),
+        assistantMessage("msg-assistant", "ses_real", "doing one more thing", {
+            input: 920_000,
+            output: 10_000,
+        }),
     ]
 
-    const overMax = isContextOverLimits(config, state, "opencode-go", "deepseek-v4-flash", overMaxTokens)
+    const overMax = isContextOverLimits(
+        config,
+        state,
+        "opencode-go",
+        "deepseek-v4-flash",
+        overMaxTokens,
+    )
     assert.equal(overMax.overMinLimit, true, "920K should be above 10% min (100K)")
     assert.equal(overMax.overMaxLimit, true, "920K should exceed 90% max (900K)")
 })

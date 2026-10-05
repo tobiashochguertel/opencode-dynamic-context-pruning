@@ -1,24 +1,38 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { getResolvedCompressValue, deepCloneConfig, mergeCompress, validateConfigTypes, getInvalidConfigKeys } from "../../lib/config"
+import {
+    getResolvedCompressValue,
+    deepCloneConfig,
+    mergeCompress,
+    validateConfigTypes,
+    getInvalidConfigKeys,
+} from "../../lib/config"
 import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -41,7 +55,11 @@ test("deepCloneConfig creates independent copy of commands.protectedTools", () =
     const config = baseConfig()
     const clone = deepCloneConfig(config)
     clone.commands.protectedTools.push("new-tool")
-    assert.equal(config.commands.protectedTools.length, 0, "original protectedTools should be unchanged")
+    assert.equal(
+        config.commands.protectedTools.length,
+        0,
+        "original protectedTools should be unchanged",
+    )
 })
 
 test("deepCloneConfig creates independent compress.providers (deep clone)", () => {
@@ -125,7 +143,7 @@ test("mergeCompress returns base when empty override given", () => {
 test("mergeCompress merges providers from override into base", () => {
     const base = baseConfig({ "opencode-go": { nudgeFrequency: 10 } }).compress
     const result = mergeCompress(base, {
-        providers: { "google": { nudgeFrequency: 8 } },
+        providers: { google: { nudgeFrequency: 8 } },
     })
     assert.ok("opencode-go" in result.providers!, "base provider should be preserved")
     assert.ok("google" in result.providers!, "override provider should be added")
@@ -154,7 +172,10 @@ test("mergeCompress merges models from override into existing provider", () => {
             },
         },
     })
-    assert.ok("flash" in result.providers!["opencode-go"].models!, "existing model should be preserved")
+    assert.ok(
+        "flash" in result.providers!["opencode-go"].models!,
+        "existing model should be preserved",
+    )
     assert.ok("pro" in result.providers!["opencode-go"].models!, "new model should be added")
 })
 
@@ -188,8 +209,11 @@ test("mergeCompress non-overlapping fields from override provider do not erase b
         },
     })
     assert.equal(result.providers!["opencode-go"].nudgeFrequency, 99)
-    assert.equal(result.providers!["opencode-go"].maxContextLimit, "90%",
-        "maxContextLimit from base should be preserved")
+    assert.equal(
+        result.providers!["opencode-go"].maxContextLimit,
+        "90%",
+        "maxContextLimit from base should be preserved",
+    )
 })
 
 // --- mergeCompress protectedTools additivity ---
@@ -218,7 +242,9 @@ test("getResolvedCompressValue called multiple times returns consistent result",
 })
 
 test("validateConfigTypes does not mutate config", () => {
-    const config = { compress: { mode: "range", nudgeFrequency: 5, providers: { test: { nudgeFrequency: 10 } } } }
+    const config = {
+        compress: { mode: "range", nudgeFrequency: 5, providers: { test: { nudgeFrequency: 10 } } },
+    }
     const configJson = JSON.stringify(config)
     validateConfigTypes(config as any)
     assert.equal(JSON.stringify(config), configJson, "config should be unchanged")
@@ -253,11 +279,10 @@ test("resolution with same config multiple times for different fields is consist
 
 test("two layers with different providers merge correctly", () => {
     const globalCfg = baseConfig({ "opencode-go": { nudgeFrequency: 10 } })
-    const projectCfg = baseConfig({ "google": { nudgeFrequency: 8 } })
-    const merged = mergeCompress(
-        globalCfg.compress,
-        { providers: projectCfg.compress.providers as any },
-    )
+    const projectCfg = baseConfig({ google: { nudgeFrequency: 8 } })
+    const merged = mergeCompress(globalCfg.compress, {
+        providers: projectCfg.compress.providers as any,
+    })
     assert.ok("opencode-go" in merged.providers!, "global provider should survive")
     assert.ok("google" in merged.providers!, "project provider should be added")
 })
@@ -265,26 +290,35 @@ test("two layers with different providers merge correctly", () => {
 test("project layer overrides global for same provider field", () => {
     const globalCfg = baseConfig({ "opencode-go": { nudgeFrequency: 10 } })
     const projectCfg = baseConfig({ "opencode-go": { nudgeFrequency: 3 } })
-    const merged = mergeCompress(
-        globalCfg.compress,
-        { providers: projectCfg.compress.providers as any },
-    )
+    const merged = mergeCompress(globalCfg.compress, {
+        providers: projectCfg.compress.providers as any,
+    })
     assert.equal(merged.providers!["opencode-go"].nudgeFrequency, 3)
 })
 
 test("three layers cascade correctly (global -> configDir -> project)", () => {
     const global = baseConfig({ "opencode-go": { nudgeFrequency: 10 } })
-    const configDir = baseConfig({ "opencode-go": { nudgeFrequency: 5 }, "google": { nudgeFrequency: 8 } })
+    const configDir = baseConfig({
+        "opencode-go": { nudgeFrequency: 5 },
+        google: { nudgeFrequency: 8 },
+    })
     const project = baseConfig({ "opencode-go": { nudgeFrequency: 3 } })
 
     let merged = mergeCompress(global.compress, compress(global.compress, configDir))
     merged = mergeCompress(merged, compress(merged, project))
 
-    assert.equal(merged.providers!["opencode-go"].nudgeFrequency, 3, "project should win for opencode-go")
+    assert.equal(
+        merged.providers!["opencode-go"].nudgeFrequency,
+        3,
+        "project should win for opencode-go",
+    )
     assert.equal(merged.providers!["google"].nudgeFrequency, 8, "configDir provider should survive")
 })
 
-function compress(base: PluginConfig["compress"], layer: PluginConfig): Partial<PluginConfig["compress"]> {
+function compress(
+    base: PluginConfig["compress"],
+    layer: PluginConfig,
+): Partial<PluginConfig["compress"]> {
     return {
         providers: layer.compress.providers as any,
     }
@@ -295,7 +329,10 @@ function compress(base: PluginConfig["compress"], layer: PluginConfig): Partial<
 test("deepCloneConfig with 50 providers creates independent copy", () => {
     const providers: Record<string, any> = {}
     for (let i = 0; i < 50; i++) {
-        providers[`p${i}`] = { nudgeFrequency: i, models: { [`m${i}`]: { maxContextLimit: i * 1000 } } }
+        providers[`p${i}`] = {
+            nudgeFrequency: i,
+            models: { [`m${i}`]: { maxContextLimit: i * 1000 } },
+        }
     }
     const config = baseConfig(providers)
     const clone = deepCloneConfig(config)

@@ -1,7 +1,8 @@
 import { z } from "zod"
 import type { CompressTool, ToolContext } from "./types"
 import { countTokens } from "../token-utils"
-import { MESSAGE_FORMAT_EXTENSION } from "../prompts/extensions/tool"
+import { messageFormat } from "../prompts/extensions/tool"
+import { formatMessageRef, type IdFormat } from "../message-ids"
 import { formatIssues, formatResult, resolveMessages, validateArgs } from "./message-utils"
 import { finalizeSession, prepareSession, type NotificationEntry } from "./pipeline"
 import { appendProtectedPromptInfo, appendProtectedTools } from "./protected-content"
@@ -13,7 +14,7 @@ import {
 } from "./state"
 import type { CompressMessageToolArgs } from "./types"
 
-function buildSchema() {
+function buildSchema(format: IdFormat) {
     return {
         topic: z
             .string()
@@ -25,7 +26,9 @@ function buildSchema() {
                 z.object({
                     messageId: z
                         .string()
-                        .describe("Raw message ID to compress (e.g. m0001)"),
+                        .describe(
+                            `Raw message ID to compress (e.g. ${formatMessageRef(1, format)})`,
+                        ),
                     topic: z
                         .string()
                         .describe("Short label (3-5 words) for this one message summary"),
@@ -45,8 +48,8 @@ export function createCompressMessageTool(ctx: ToolContext): CompressTool {
     return {
         name: "compress",
         options: { permission: "compress" },
-        description: runtimePrompts.compressMessage + MESSAGE_FORMAT_EXTENSION,
-        input: z.object(buildSchema()),
+        description: runtimePrompts.compressMessage + messageFormat(ctx.state.idFormat),
+        input: z.object(buildSchema(ctx.state.idFormat)),
         async execute(args: any, toolCtx: any) {
             const input = args as CompressMessageToolArgs
             validateArgs(input)
@@ -108,7 +111,11 @@ export function createCompressMessageTool(ctx: ToolContext): CompressTool {
 
             for (const { plan, summaryWithTools } of preparedPlans) {
                 const blockId = allocateBlockId(ctx.state)
-                const storedSummary = wrapCompressedSummary(blockId, summaryWithTools)
+                const storedSummary = wrapCompressedSummary(
+                    blockId,
+                    summaryWithTools,
+                    ctx.state.idFormat,
+                )
                 const summaryTokens = countTokens(storedSummary)
 
                 applyCompressionState(

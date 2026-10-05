@@ -5,20 +5,28 @@ import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -87,9 +95,19 @@ test("protectedTools merge additively through layers", () => {
             models: { flash: { protectedTools: ["tool-c"] } },
         },
     })
-    const providerTools = getResolvedCompressValue<string[]>(config, "opencode-go", undefined, "protectedTools")
+    const providerTools = getResolvedCompressValue<string[]>(
+        config,
+        "opencode-go",
+        undefined,
+        "protectedTools",
+    )
     assert.deepEqual(providerTools, ["tool-b"])
 
-    const modelTools = getResolvedCompressValue<string[]>(config, "opencode-go", "flash", "protectedTools")
+    const modelTools = getResolvedCompressValue<string[]>(
+        config,
+        "opencode-go",
+        "flash",
+        "protectedTools",
+    )
     assert.deepEqual(modelTools, ["tool-c"])
 })

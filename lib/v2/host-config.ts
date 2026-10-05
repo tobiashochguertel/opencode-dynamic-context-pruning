@@ -15,7 +15,7 @@
 import { existsSync, readFileSync } from "fs"
 import { join, dirname } from "path"
 import { homedir } from "os"
-import { parse } from "jsonc-parser"
+import { parse } from "jsonc-parser/lib/esm/main.js"
 import type { HostPermissionSnapshot, PermissionConfig } from "../host-permissions"
 import type { PluginHost } from "./host"
 

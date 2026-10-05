@@ -763,8 +763,6 @@ test("hallucination stripping removes all dcp-prefixed XML tags including varian
         "omega"
 
     assert.equal(stripHallucinationsFromString(text), "alphaomega")
-
-
 })
 
 test("hallucination stripping removes colon and underscore dcp tag variants", async () => {
@@ -807,6 +805,37 @@ test("hallucination stripping does not affect non-dcp tags", async () => {
     assert.equal(
         stripHallucinationsFromString("<div>hello</div> <system-reminder>keep</system-reminder>"),
         "<div>hello</div> <system-reminder>keep</system-reminder>",
+    )
+})
+
+test("hallucination stripping preserves content when dcp-message-id is mentioned in text (issue #556)", () => {
+    const input =
+        "The tag called `<dcp-message-id>` is used to track messages. " +
+        "This text should survive.\n\n" +
+        "<dcp-message-id>m0369</dcp-message-id>"
+
+    assert.equal(
+        stripHallucinationsFromString(input),
+        "The tag called `` is used to track messages. This text should survive.\n\n",
+    )
+})
+
+test("hallucination stripping handles priority on injected message-id suffixes", () => {
+    const input =
+        "The tag called `<dcp-message-id>` is used to track messages. " +
+        "This text should survive.\n\n" +
+        '<dcp-message-id priority="low">m0370</dcp-message-id>'
+
+    assert.equal(
+        stripHallucinationsFromString(input),
+        "The tag called `` is used to track messages. This text should survive.\n\n",
+    )
+})
+
+test("hallucination stripping removes trailing mXXXX</parameter> artifact (issue #555)", () => {
+    assert.equal(
+        stripHallucinationsFromString("Total: maybe 20 lines changed.\n\nm0340</parameter>\n\n"),
+        "Total: maybe 20 lines changed.\n\n",
     )
 })
 

@@ -1,24 +1,36 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { getResolvedCompressValue, getInvalidConfigKeys, validateConfigTypes } from "../../lib/config"
+import {
+    getResolvedCompressValue,
+    getInvalidConfigKeys,
+    validateConfigTypes,
+} from "../../lib/config"
 import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -136,14 +148,22 @@ test("deprecated modelMaxLimits values are NOT applied at runtime (fall back to 
     const config = baseConfig()
     config.compress.modelMaxLimits = { "opencode-go/flash": 10 }
     const result = getResolvedCompressValue(config, "opencode-go", "flash", "maxContextLimit")
-    assert.equal(result, undefined, "modelMaxLimits is deprecated and ignored by getResolvedCompressValue")
+    assert.equal(
+        result,
+        undefined,
+        "modelMaxLimits is deprecated and ignored by getResolvedCompressValue",
+    )
 })
 
 test("deprecated modelMinLimits values are NOT applied at runtime (fall back to global)", () => {
     const config = baseConfig()
     config.compress.modelMinLimits = { "opencode-go/flash": "10%" }
     const result = getResolvedCompressValue(config, "opencode-go", "flash", "minContextLimit")
-    assert.equal(result, undefined, "modelMinLimits is deprecated and ignored by getResolvedCompressValue")
+    assert.equal(
+        result,
+        undefined,
+        "modelMinLimits is deprecated and ignored by getResolvedCompressValue",
+    )
 })
 
 // --- modelMaxLimits + providers together ---
@@ -157,7 +177,7 @@ test("deprecated modelMaxLimits and new providers together pass validation", () 
             providers: {
                 "opencode-go": {
                     nudgeFrequency: 10,
-                    models: { "flash": { maxContextLimit: 150000 } },
+                    models: { flash: { maxContextLimit: 150000 } },
                 },
             },
         },
@@ -213,7 +233,10 @@ test("no providers: isContextOverLimits uses global maxContextLimit", () => {
     const config = baseConfig()
     delete (config.compress as any).providers
 
-    const parseLimitValue = (limit: number | `${number}%` | undefined, ctx: number): number | undefined => {
+    const parseLimitValue = (
+        limit: number | `${number}%` | undefined,
+        ctx: number,
+    ): number | undefined => {
         if (limit === undefined) return undefined
         if (typeof limit === "number") return limit
         if (!limit.endsWith("%")) return undefined
@@ -267,7 +290,11 @@ test("config with only modelMaxLimits has no invalid keys", () => {
         },
     }
     const keys = getInvalidConfigKeys(config as any)
-    assert.equal(keys.length, 0, "modelMaxLimits should not trigger invalid keys: " + keys.join(", "))
+    assert.equal(
+        keys.length,
+        0,
+        "modelMaxLimits should not trigger invalid keys: " + keys.join(", "),
+    )
 })
 
 test("config with only deprecated modelMinLimits has no invalid keys", () => {

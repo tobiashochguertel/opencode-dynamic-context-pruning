@@ -1,4 +1,5 @@
 import type { PluginConfig } from "../config"
+import type { ZodType } from "zod"
 import type { Logger } from "../logger"
 import type { PromptStore } from "../prompts/store"
 import type { CompressionBlock, CompressionMode, SessionState, WithParts } from "../state"
@@ -114,7 +115,10 @@ export interface CompressionStateInput {
 export interface CompressTool {
     name: string
     description: string
-    input: unknown
+    input: ZodType
     options?: { permission?: string }
-    execute: (input: any, toolCtx: any) => Promise<{ content?: string; metadata?: Record<string, unknown> }>
+    execute: (
+        input: any,
+        toolCtx: any,
+    ) => Promise<{ content?: string; metadata?: Record<string, unknown> }>
 }

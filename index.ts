@@ -180,7 +180,10 @@ export default Plugin.define({
                             // to suppress the default prompt; in V2 the
                             // command's execute() is the whole behavior, so
                             // the throw is just control flow.
-                            if (typeof err?.message === "string" && err.message.includes("__DCP_")) {
+                            if (
+                                typeof err?.message === "string" &&
+                                err.message.includes("__DCP_")
+                            ) {
                                 if (invocation?.prompt) {
                                     try {
                                         ;(invocation.prompt as any).text = ""

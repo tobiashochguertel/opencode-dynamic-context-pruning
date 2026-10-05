@@ -1,8 +1,18 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "fs"
 import { join, dirname } from "path"
 import { homedir } from "os"
-import { parse } from "jsonc-parser"
+import { parse } from "jsonc-parser/lib/esm/main.js"
 import type { PluginHost } from "./v2/host"
+
+type ConfigContext = { directory: string } & {
+    client: {
+        tui: {
+            showToast(input: {
+                body: { title: string; message: string; variant: "warning"; duration: number }
+            }): unknown
+        }
+    }
+}
 
 type Permission = "ask" | "allow" | "deny"
 type CompressMode = "range" | "message"
@@ -27,8 +37,7 @@ export interface CompressOverrides {
     protectUserMessages?: boolean
 }
 
-export interface ModelOverrides extends CompressOverrides {
-}
+export interface ModelOverrides extends CompressOverrides {}
 
 export interface ProviderOverrides extends CompressOverrides {
     models?: Record<string, ModelOverrides>
@@ -404,7 +413,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     }
                 }
 
-                if (overrides.summaryBuffer !== undefined && typeof overrides.summaryBuffer !== "boolean") {
+                if (
+                    overrides.summaryBuffer !== undefined &&
+                    typeof overrides.summaryBuffer !== "boolean"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.summaryBuffer`,
                         expected: "boolean",
@@ -412,7 +424,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.showCompression !== undefined && typeof overrides.showCompression !== "boolean") {
+                if (
+                    overrides.showCompression !== undefined &&
+                    typeof overrides.showCompression !== "boolean"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.showCompression`,
                         expected: "boolean",
@@ -420,7 +435,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.nudgeFrequency !== undefined && typeof overrides.nudgeFrequency !== "number") {
+                if (
+                    overrides.nudgeFrequency !== undefined &&
+                    typeof overrides.nudgeFrequency !== "number"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.nudgeFrequency`,
                         expected: "number",
@@ -436,7 +454,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.iterationNudgeThreshold !== undefined && typeof overrides.iterationNudgeThreshold !== "number") {
+                if (
+                    overrides.iterationNudgeThreshold !== undefined &&
+                    typeof overrides.iterationNudgeThreshold !== "number"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.iterationNudgeThreshold`,
                         expected: "number",
@@ -444,7 +465,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (typeof overrides.iterationNudgeThreshold === "number" && overrides.iterationNudgeThreshold < 1) {
+                if (
+                    typeof overrides.iterationNudgeThreshold === "number" &&
+                    overrides.iterationNudgeThreshold < 1
+                ) {
                     errors.push({
                         key: `${keyPrefix}.iterationNudgeThreshold`,
                         expected: "positive number (>= 1)",
@@ -452,7 +476,11 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.nudgeForce !== undefined && overrides.nudgeForce !== "strong" && overrides.nudgeForce !== "soft") {
+                if (
+                    overrides.nudgeForce !== undefined &&
+                    overrides.nudgeForce !== "strong" &&
+                    overrides.nudgeForce !== "soft"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.nudgeForce`,
                         expected: '"strong" | "soft"',
@@ -460,7 +488,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.protectedTools !== undefined && !Array.isArray(overrides.protectedTools)) {
+                if (
+                    overrides.protectedTools !== undefined &&
+                    !Array.isArray(overrides.protectedTools)
+                ) {
                     errors.push({
                         key: `${keyPrefix}.protectedTools`,
                         expected: "string[]",
@@ -468,7 +499,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.protectTags !== undefined && typeof overrides.protectTags !== "boolean") {
+                if (
+                    overrides.protectTags !== undefined &&
+                    typeof overrides.protectTags !== "boolean"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.protectTags`,
                         expected: "boolean",
@@ -476,7 +510,10 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     })
                 }
 
-                if (overrides.protectUserMessages !== undefined && typeof overrides.protectUserMessages !== "boolean") {
+                if (
+                    overrides.protectUserMessages !== undefined &&
+                    typeof overrides.protectUserMessages !== "boolean"
+                ) {
                     errors.push({
                         key: `${keyPrefix}.protectUserMessages`,
                         expected: "boolean",
@@ -486,7 +523,8 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
 
                 const validateLimitValue = (key: string, value: unknown): void => {
                     const isValidNumber = typeof value === "number"
-                    const isPercentString = typeof value === "string" && /^\d+(?:\.\d+)?%$/.test(value)
+                    const isPercentString =
+                        typeof value === "string" && /^\d+(?:\.\d+)?%$/.test(value)
 
                     if (!isValidNumber && !isPercentString) {
                         errors.push({
@@ -505,10 +543,22 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
                     validateLimitValue(`${keyPrefix}.minContextLimit`, overrides.minContextLimit)
                 }
 
-                if (overrides.models && typeof overrides.models === "object" && !Array.isArray(overrides.models)) {
+                if (
+                    overrides.models &&
+                    typeof overrides.models === "object" &&
+                    !Array.isArray(overrides.models)
+                ) {
                     for (const [modelId, modelOverrides] of Object.entries(overrides.models)) {
-                        if (modelOverrides && typeof modelOverrides === "object" && !Array.isArray(modelOverrides)) {
-                            validateCompressOverrides(`${keyPrefix}.models.${modelId}`, modelOverrides as Record<string, any>, false)
+                        if (
+                            modelOverrides &&
+                            typeof modelOverrides === "object" &&
+                            !Array.isArray(modelOverrides)
+                        ) {
+                            validateCompressOverrides(
+                                `${keyPrefix}.models.${modelId}`,
+                                modelOverrides as Record<string, any>,
+                                false,
+                            )
                         } else {
                             errors.push({
                                 key: `${keyPrefix}.models.${modelId}`,
@@ -521,19 +571,37 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
             }
 
             if (compress.providers !== undefined) {
-                if (typeof compress.providers !== "object" || compress.providers === null || Array.isArray(compress.providers)) {
+                if (
+                    typeof compress.providers !== "object" ||
+                    compress.providers === null ||
+                    Array.isArray(compress.providers)
+                ) {
                     errors.push({
                         key: "compress.providers",
                         expected: "object",
-                        actual: Array.isArray(compress.providers) ? "array" : typeof compress.providers,
+                        actual: Array.isArray(compress.providers)
+                            ? "array"
+                            : typeof compress.providers,
                     })
                 }
             }
 
-            if (compress.providers && typeof compress.providers === "object" && !Array.isArray(compress.providers)) {
+            if (
+                compress.providers &&
+                typeof compress.providers === "object" &&
+                !Array.isArray(compress.providers)
+            ) {
                 for (const [providerId, providerOverrides] of Object.entries(compress.providers)) {
-                    if (providerOverrides && typeof providerOverrides === "object" && !Array.isArray(providerOverrides)) {
-                        validateCompressOverrides(`compress.providers.${providerId}`, providerOverrides as Record<string, any>, true)
+                    if (
+                        providerOverrides &&
+                        typeof providerOverrides === "object" &&
+                        !Array.isArray(providerOverrides)
+                    ) {
+                        validateCompressOverrides(
+                            `compress.providers.${providerId}`,
+                            providerOverrides as Record<string, any>,
+                            true,
+                        )
                     } else {
                         errors.push({
                             key: `compress.providers.${providerId}`,
@@ -675,7 +743,7 @@ export function validateConfigTypes(config: Record<string, any>): ValidationErro
 }
 
 function showConfigWarnings(
-    ctx: PluginHost,
+    ctx: PluginHost | ConfigContext,
     configPath: string,
     configData: Record<string, any>,
     isProject: boolean,
@@ -707,7 +775,8 @@ function showConfigWarnings(
 
     setTimeout(() => {
         try {
-            ctx.notify(
+            notifyConfigWarning(
+                ctx,
                 `DCP: ${configType} warning`,
                 `${configPath}\n${messages.join("\n")}`,
             )
@@ -787,7 +856,7 @@ function findOpencodeDir(startDir: string): string | null {
     return null
 }
 
-function getConfigPaths(ctx?: PluginHost): {
+function getConfigPaths(ctx?: PluginHost | ConfigContext): {
     global: string | null
     configDir: string | null
     project: string | null
@@ -902,18 +971,26 @@ function mergeProviderOverrides(
 
     if (providerOverrides.mode !== undefined) merged.mode = providerOverrides.mode
     if (providerOverrides.permission !== undefined) merged.permission = providerOverrides.permission
-    if (providerOverrides.showCompression !== undefined) merged.showCompression = providerOverrides.showCompression
-    if (providerOverrides.summaryBuffer !== undefined) merged.summaryBuffer = providerOverrides.summaryBuffer
-    if (providerOverrides.maxContextLimit !== undefined) merged.maxContextLimit = providerOverrides.maxContextLimit
-    if (providerOverrides.minContextLimit !== undefined) merged.minContextLimit = providerOverrides.minContextLimit
-    if (providerOverrides.nudgeFrequency !== undefined) merged.nudgeFrequency = providerOverrides.nudgeFrequency
-    if (providerOverrides.iterationNudgeThreshold !== undefined) merged.iterationNudgeThreshold = providerOverrides.iterationNudgeThreshold
+    if (providerOverrides.showCompression !== undefined)
+        merged.showCompression = providerOverrides.showCompression
+    if (providerOverrides.summaryBuffer !== undefined)
+        merged.summaryBuffer = providerOverrides.summaryBuffer
+    if (providerOverrides.maxContextLimit !== undefined)
+        merged.maxContextLimit = providerOverrides.maxContextLimit
+    if (providerOverrides.minContextLimit !== undefined)
+        merged.minContextLimit = providerOverrides.minContextLimit
+    if (providerOverrides.nudgeFrequency !== undefined)
+        merged.nudgeFrequency = providerOverrides.nudgeFrequency
+    if (providerOverrides.iterationNudgeThreshold !== undefined)
+        merged.iterationNudgeThreshold = providerOverrides.iterationNudgeThreshold
     if (providerOverrides.nudgeForce !== undefined) merged.nudgeForce = providerOverrides.nudgeForce
     if (providerOverrides.protectedTools !== undefined) {
         merged.protectedTools = providerOverrides.protectedTools
     }
-    if (providerOverrides.protectTags !== undefined) merged.protectTags = providerOverrides.protectTags
-    if (providerOverrides.protectUserMessages !== undefined) merged.protectUserMessages = providerOverrides.protectUserMessages
+    if (providerOverrides.protectTags !== undefined)
+        merged.protectTags = providerOverrides.protectTags
+    if (providerOverrides.protectUserMessages !== undefined)
+        merged.protectUserMessages = providerOverrides.protectUserMessages
     if (providerOverrides.models !== undefined) merged.models = providerOverrides.models
 
     return merged
@@ -1020,7 +1097,7 @@ export function mergeCompress(
                     for (const [k, v] of Object.entries(baseOverrides)) {
                         if (k === "models") continue
                         if (!(k in merged) || merged[k as keyof ProviderOverrides] === undefined) {
-                            (merged as any)[k] = v
+                            ;(merged as any)[k] = v
                         }
                     }
                     if (baseOverrides.models) {
@@ -1051,7 +1128,8 @@ export function mergeCompress(
         protectedTools: [...new Set([...base.protectedTools, ...(override.protectedTools ?? [])])],
         protectTags: override.protectTags ?? base.protectTags,
         protectUserMessages: override.protectUserMessages ?? base.protectUserMessages,
-        providers: finalProviders && Object.keys(finalProviders).length > 0 ? finalProviders : undefined,
+        providers:
+            finalProviders && Object.keys(finalProviders).length > 0 ? finalProviders : undefined,
     }
 }
 
@@ -1077,10 +1155,26 @@ function mergeLayer(config: PluginConfig, data: Record<string, any>): PluginConf
     }
 }
 
-function scheduleParseWarning(ctx: PluginHost, title: string, message: string): void {
+function notifyConfigWarning(
+    ctx: PluginHost | ConfigContext,
+    title: string,
+    message: string,
+): void {
+    if ("notify" in ctx) {
+        ctx.notify(title, message)
+    } else {
+        ctx.client.tui.showToast({ body: { title, message, variant: "warning", duration: 10000 } })
+    }
+}
+
+function scheduleParseWarning(
+    ctx: PluginHost | ConfigContext,
+    title: string,
+    message: string,
+): void {
     setTimeout(() => {
         try {
-            ctx.notify(title, message)
+            notifyConfigWarning(ctx, title, message)
         } catch {}
     }, 7000)
 }
@@ -1093,7 +1187,7 @@ function scheduleParseWarning(ctx: PluginHost, title: string, message: string): 
  *
  * Each layer overrides the previous. Returns the fully merged config.
  */
-export function getConfig(ctx: PluginHost): PluginConfig {
+export function getConfig(ctx: PluginHost | ConfigContext): PluginConfig {
     let config = deepCloneConfig(defaultConfig)
     const configPaths = getConfigPaths(ctx)
 

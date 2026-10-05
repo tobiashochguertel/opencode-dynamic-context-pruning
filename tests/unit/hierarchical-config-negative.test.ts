@@ -1,24 +1,36 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { getResolvedCompressValue, getInvalidConfigKeys, validateConfigTypes } from "../../lib/config"
+import {
+    getResolvedCompressValue,
+    getInvalidConfigKeys,
+    validateConfigTypes,
+} from "../../lib/config"
 import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -88,8 +100,10 @@ test("getInvalidConfigKeys reports unknown keys inside compress.providers (non-r
         },
     }
     const keys = getInvalidConfigKeys(config as any)
-    assert.ok(keys.every((k) => !k.startsWith("compress.providers.")),
-        "should skip compress.providers recursively: " + keys.join(", "))
+    assert.ok(
+        keys.every((k) => !k.startsWith("compress.providers.")),
+        "should skip compress.providers recursively: " + keys.join(", "),
+    )
 })
 
 test("validateConfigTypes rejects compress.providers as array", () => {
@@ -158,7 +172,7 @@ test("validateConfigTypes rejects compress.providers.model entry as null", () =>
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": null,
+                        flash: null,
                     },
                 },
             },
@@ -173,7 +187,7 @@ test("validateConfigTypes rejects compress.providers.model entry as string", () 
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": "invalid",
+                        flash: "invalid",
                     },
                 },
             },
@@ -212,8 +226,10 @@ test("validateConfigTypes rejects negative percentage values", () => {
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject negative percentage, got: " + JSON.stringify(errors))
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject negative percentage, got: " + JSON.stringify(errors),
+    )
 })
 
 test("validateConfigTypes rejects percentage over 100%", () => {
@@ -224,8 +240,11 @@ test("validateConfigTypes rejects percentage over 100%", () => {
             },
         },
     })
-    assert.equal(errors.filter((e) => e.key.includes("maxContextLimit")).length, 0,
-        "150% should pass format validation, clamp happens at runtime")
+    assert.equal(
+        errors.filter((e) => e.key.includes("maxContextLimit")).length,
+        0,
+        "150% should pass format validation, clamp happens at runtime",
+    )
 })
 
 test("validateConfigTypes rejects malformed percentage - double percent", () => {
@@ -236,8 +255,10 @@ test("validateConfigTypes rejects malformed percentage - double percent", () => 
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject double percent")
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject double percent",
+    )
 })
 
 test("validateConfigTypes rejects malformed percentage - percent first", () => {
@@ -248,8 +269,10 @@ test("validateConfigTypes rejects malformed percentage - percent first", () => {
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject percent-first format")
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject percent-first format",
+    )
 })
 
 test("validateConfigTypes rejects malformed percentage - no number", () => {
@@ -260,8 +283,10 @@ test("validateConfigTypes rejects malformed percentage - no number", () => {
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject bare percent")
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject bare percent",
+    )
 })
 
 test("validateConfigTypes rejects malformed percentage - space before percent", () => {
@@ -272,8 +297,10 @@ test("validateConfigTypes rejects malformed percentage - space before percent", 
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject space before percent")
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject space before percent",
+    )
 })
 
 test("validateConfigTypes rejects percentage with suffix text", () => {
@@ -284,8 +311,10 @@ test("validateConfigTypes rejects percentage with suffix text", () => {
             },
         },
     })
-    assert.ok(errors.some((e) => e.key.includes("maxContextLimit")),
-        "should reject percentage with suffix")
+    assert.ok(
+        errors.some((e) => e.key.includes("maxContextLimit")),
+        "should reject percentage with suffix",
+    )
 })
 
 test("validateConfigTypes rejects nudgeForce with invalid value at provider level", () => {
@@ -305,13 +334,15 @@ test("validateConfigTypes rejects nudgeForce with invalid value at model level",
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { nudgeForce: "medium" },
+                        flash: { nudgeForce: "medium" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.nudgeForce"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.nudgeForce"),
+    )
 })
 
 test("validateConfigTypes rejects showCompression with non-boolean at model level", () => {
@@ -320,13 +351,15 @@ test("validateConfigTypes rejects showCompression with non-boolean at model leve
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { showCompression: "yes" },
+                        flash: { showCompression: "yes" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.showCompression"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.showCompression"),
+    )
 })
 
 test("validateConfigTypes rejects protectTags with non-boolean at model level", () => {
@@ -335,13 +368,15 @@ test("validateConfigTypes rejects protectTags with non-boolean at model level", 
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { protectTags: 1 },
+                        flash: { protectTags: 1 },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.protectTags"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.protectTags"),
+    )
 })
 
 test("validateConfigTypes rejects protectUserMessages with non-boolean at model level", () => {
@@ -350,13 +385,17 @@ test("validateConfigTypes rejects protectUserMessages with non-boolean at model 
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { protectUserMessages: "true" },
+                        flash: { protectUserMessages: "true" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.protectUserMessages"))
+    assert.ok(
+        errors.some(
+            (e) => e.key === "compress.providers.opencode-go.models.flash.protectUserMessages",
+        ),
+    )
 })
 
 test("validateConfigTypes rejects nudgeFrequency with non-number at model level", () => {
@@ -365,13 +404,15 @@ test("validateConfigTypes rejects nudgeFrequency with non-number at model level"
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { nudgeFrequency: "often" },
+                        flash: { nudgeFrequency: "often" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.nudgeFrequency"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.nudgeFrequency"),
+    )
 })
 
 test("validateConfigTypes rejects iterationNudgeThreshold with non-number at model level", () => {
@@ -380,13 +421,17 @@ test("validateConfigTypes rejects iterationNudgeThreshold with non-number at mod
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { iterationNudgeThreshold: "many" },
+                        flash: { iterationNudgeThreshold: "many" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.iterationNudgeThreshold"))
+    assert.ok(
+        errors.some(
+            (e) => e.key === "compress.providers.opencode-go.models.flash.iterationNudgeThreshold",
+        ),
+    )
 })
 
 test("validateConfigTypes rejects summaryBuffer with non-boolean at model level", () => {
@@ -395,13 +440,15 @@ test("validateConfigTypes rejects summaryBuffer with non-boolean at model level"
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { summaryBuffer: 0 },
+                        flash: { summaryBuffer: 0 },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.summaryBuffer"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.summaryBuffer"),
+    )
 })
 
 test("validateConfigTypes rejects protectedTools with non-array at model level", () => {
@@ -410,13 +457,15 @@ test("validateConfigTypes rejects protectedTools with non-array at model level",
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { protectedTools: "not-array" },
+                        flash: { protectedTools: "not-array" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.protectedTools"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.protectedTools"),
+    )
 })
 
 test("validateConfigTypes rejects permission with invalid value at model level", () => {
@@ -425,13 +474,15 @@ test("validateConfigTypes rejects permission with invalid value at model level",
             providers: {
                 "opencode-go": {
                     models: {
-                        "flash": { permission: "grant" },
+                        flash: { permission: "grant" },
                     },
                 },
             },
         },
     })
-    assert.ok(errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.permission"))
+    assert.ok(
+        errors.some((e) => e.key === "compress.providers.opencode-go.models.flash.permission"),
+    )
 })
 
 test("validateConfigTypes rejects mode with invalid value at provider level", () => {
@@ -448,7 +499,10 @@ test("validateConfigTypes rejects mode with invalid value at provider level", ()
 test("validateConfigTypes with large number of providers does not blow up", () => {
     const providers: Record<string, any> = {}
     for (let i = 1; i <= 100; i++) {
-        providers[`provider-${i}`] = { nudgeFrequency: i, models: { [`model-${i}`]: { maxContextLimit: i * 1000 } } }
+        providers[`provider-${i}`] = {
+            nudgeFrequency: i,
+            models: { [`model-${i}`]: { maxContextLimit: i * 1000 } },
+        }
     }
     const errors = validateConfigTypes({ compress: { providers } })
     assert.equal(errors.length, 0, "100 valid providers should have no errors")
@@ -457,7 +511,10 @@ test("validateConfigTypes with large number of providers does not blow up", () =
 test("getInvalidConfigKeys with deeply nested provider structure skips all", () => {
     const providers: Record<string, any> = {}
     for (let i = 0; i < 50; i++) {
-        providers[`p${i}`] = { nudgeFrequency: i, models: { [`m${i}`]: { maxContextLimit: i * 100 } } }
+        providers[`p${i}`] = {
+            nudgeFrequency: i,
+            models: { [`m${i}`]: { maxContextLimit: i * 100 } },
+        }
     }
     const config = { compress: { providers } }
     const keys = getInvalidConfigKeys(config as any)
