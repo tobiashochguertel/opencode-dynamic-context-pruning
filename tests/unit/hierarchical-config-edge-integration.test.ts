@@ -1,24 +1,38 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { getResolvedCompressValue, getInvalidConfigKeys, validateConfigTypes, deepCloneConfig, mergeCompress } from "../../lib/config"
+import {
+    getResolvedCompressValue,
+    getInvalidConfigKeys,
+    validateConfigTypes,
+    deepCloneConfig,
+    mergeCompress,
+} from "../../lib/config"
 import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -32,10 +46,10 @@ function baseConfig(providers?: Record<string, any>): PluginConfig {
 
 test("CJK provider ID with model resolves correctly", () => {
     const config = baseConfig({
-        "中文提供商": {
+        中文提供商: {
             nudgeFrequency: 7,
             models: {
-                "深度求索": { nudgeFrequency: 3 },
+                深度求索: { nudgeFrequency: 3 },
             },
         },
     })
@@ -55,7 +69,7 @@ test("emoji provider ID resolves correctly", () => {
 
 test("emoji model ID resolves correctly", () => {
     const config = baseConfig({
-        "test": {
+        test: {
             models: {
                 "🤖-model": { nudgeFrequency: 4 },
             },
@@ -69,7 +83,12 @@ test("unicode wildcard provider works with CJK providers", () => {
     const config = baseConfig({
         "*": { nudgeFrequency: 5 },
     })
-    const result = getResolvedCompressValue(config, "日本語プロバイダー", undefined, "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "日本語プロバイダー",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(result, 5)
 })
 
@@ -77,7 +96,7 @@ test("validateConfigTypes accepts unicode provider IDs", () => {
     const errors = validateConfigTypes({
         compress: {
             providers: {
-                "测试": { nudgeFrequency: 10 },
+                测试: { nudgeFrequency: 10 },
             },
         },
     })
@@ -98,7 +117,12 @@ test("provider ID with @ symbol resolves correctly", () => {
     const config = baseConfig({
         "model@company.com": { nudgeFrequency: 6 },
     })
-    const result = getResolvedCompressValue(config, "model@company.com", undefined, "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "model@company.com",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(result, 6)
 })
 
@@ -114,34 +138,54 @@ test("provider ID with mixed special characters resolves correctly", () => {
     const config = baseConfig({
         "org-name/v2.0@internal": { nudgeFrequency: 3 },
     })
-    const result = getResolvedCompressValue(config, "org-name/v2.0@internal", undefined, "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "org-name/v2.0@internal",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(result, 3)
 })
 
 test("model ID with dots, @, and hyphens resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
                 "model-v2.0@company": { nudgeFrequency: 7 },
             },
         },
     })
-    const result = getResolvedCompressValue(config, "provider", "model-v2.0@company", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "provider",
+        "model-v2.0@company",
+        "nudgeFrequency",
+    )
     assert.equal(result, 7)
 })
 
 test("underscore-heavy provider and model IDs resolve correctly", () => {
     const config = baseConfig({
-        "my_custom_provider_v_2": {
+        my_custom_provider_v_2: {
             nudgeFrequency: 11,
             models: {
-                "my_special_model_v_5": { nudgeFrequency: 2 },
+                my_special_model_v_5: { nudgeFrequency: 2 },
             },
         },
     })
-    const providerVal = getResolvedCompressValue(config, "my_custom_provider_v_2", undefined, "nudgeFrequency")
+    const providerVal = getResolvedCompressValue(
+        config,
+        "my_custom_provider_v_2",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(providerVal, 11)
-    const modelVal = getResolvedCompressValue(config, "my_custom_provider_v_2", "my_special_model_v_5", "nudgeFrequency")
+    const modelVal = getResolvedCompressValue(
+        config,
+        "my_custom_provider_v_2",
+        "my_special_model_v_5",
+        "nudgeFrequency",
+    )
     assert.equal(modelVal, 2)
 })
 
@@ -159,7 +203,7 @@ test("very long provider ID (200+ chars) resolves correctly", () => {
 test("very long model ID (200+ chars) resolves correctly", () => {
     const longModelId = "b".repeat(250)
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
                 [longModelId]: { nudgeFrequency: 2 },
             },
@@ -215,7 +259,10 @@ test("100 providers with no models resolves for each", () => {
 test("deepCloneConfig with 100 providers is fast", () => {
     const providers: Record<string, any> = {}
     for (let i = 0; i < 100; i++) {
-        providers[`p${i}`] = { nudgeFrequency: i, models: { [`m${i}`]: { maxContextLimit: i * 1000 } } }
+        providers[`p${i}`] = {
+            nudgeFrequency: i,
+            models: { [`m${i}`]: { maxContextLimit: i * 1000 } },
+        }
     }
     const config = baseConfig(providers)
     const start = Date.now()
@@ -247,9 +294,9 @@ test("mergeCompress with 100 override providers is fast", () => {
 
 test("nudgeFrequency: 0 at model level is clamped to 1", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { nudgeFrequency: 0 },
+                model: { nudgeFrequency: 0 },
             },
         },
     })
@@ -259,9 +306,9 @@ test("nudgeFrequency: 0 at model level is clamped to 1", () => {
 
 test("iterationNudgeThreshold: -1 at model level resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { iterationNudgeThreshold: -1 },
+                model: { iterationNudgeThreshold: -1 },
             },
         },
     })
@@ -271,9 +318,9 @@ test("iterationNudgeThreshold: -1 at model level resolves correctly", () => {
 
 test("maxContextLimit: 0 at model level resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { maxContextLimit: 0 },
+                model: { maxContextLimit: 0 },
             },
         },
     })
@@ -283,9 +330,9 @@ test("maxContextLimit: 0 at model level resolves correctly", () => {
 
 test("maxContextLimit: Number.MAX_SAFE_INTEGER at model level resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { maxContextLimit: Number.MAX_SAFE_INTEGER },
+                model: { maxContextLimit: Number.MAX_SAFE_INTEGER },
             },
         },
     })
@@ -295,7 +342,7 @@ test("maxContextLimit: Number.MAX_SAFE_INTEGER at model level resolves correctly
 
 test("minContextLimit: '0%' at provider level resolves correctly", () => {
     const config = baseConfig({
-        "provider": { minContextLimit: "0%" },
+        provider: { minContextLimit: "0%" },
     })
     const result = getResolvedCompressValue(config, "provider", undefined, "minContextLimit")
     assert.equal(result, "0%")
@@ -303,7 +350,7 @@ test("minContextLimit: '0%' at provider level resolves correctly", () => {
 
 test("maxContextLimit: '100%' at provider level resolves correctly", () => {
     const config = baseConfig({
-        "provider": { maxContextLimit: "100%" },
+        provider: { maxContextLimit: "100%" },
     })
     const result = getResolvedCompressValue(config, "provider", undefined, "maxContextLimit")
     assert.equal(result, "100%")
@@ -311,7 +358,7 @@ test("maxContextLimit: '100%' at provider level resolves correctly", () => {
 
 test("maxContextLimit: '0.5%' fractional percentage resolves correctly", () => {
     const config = baseConfig({
-        "provider": { maxContextLimit: "0.5%" },
+        provider: { maxContextLimit: "0.5%" },
     })
     const result = getResolvedCompressValue(config, "provider", undefined, "maxContextLimit")
     assert.equal(result, "0.5%")
@@ -321,9 +368,9 @@ test("maxContextLimit: '0.5%' fractional percentage resolves correctly", () => {
 
 test("protectedTools with empty array at model level resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { protectedTools: [] },
+                model: { protectedTools: [] },
             },
         },
     })
@@ -333,9 +380,9 @@ test("protectedTools with empty array at model level resolves correctly", () => 
 
 test("protectedTools with single empty string resolves correctly", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
-                "model": { protectedTools: [""] },
+                model: { protectedTools: [""] },
             },
         },
     })
@@ -347,14 +394,14 @@ test("protectedTools with single empty string resolves correctly", () => {
 
 test("same provider ID in both base and override: models merge, not replace", () => {
     const base = baseConfig({
-        "provider": {
+        provider: {
             nudgeFrequency: 10,
             models: { "model-a": { nudgeFrequency: 5 } },
         },
     }).compress
     const merged = mergeCompress(base, {
         providers: {
-            "provider": {
+            provider: {
                 models: { "model-b": { nudgeFrequency: 3 } },
             },
         },
@@ -365,14 +412,14 @@ test("same provider ID in both base and override: models merge, not replace", ()
 
 test("same provider both levels with no model overlap: fields from both preserved", () => {
     const base = baseConfig({
-        "provider": {
+        provider: {
             maxContextLimit: "90%",
             minContextLimit: "10%",
         },
     }).compress
     const merged = mergeCompress(base, {
         providers: {
-            "provider": {
+            provider: {
                 nudgeFrequency: 7,
                 iterationNudgeThreshold: 30,
             },
@@ -381,12 +428,16 @@ test("same provider both levels with no model overlap: fields from both preserve
     const mergedCfg = { ...baseConfig().compress, ...merged }
     const val = getResolvedCompressValue(
         { ...baseConfig(), compress: mergedCfg } as PluginConfig,
-        "provider", undefined, "maxContextLimit",
+        "provider",
+        undefined,
+        "maxContextLimit",
     )
     assert.equal(val, "90%", "base field maxContextLimit preserved")
     const nf = getResolvedCompressValue(
         { ...baseConfig(), compress: mergedCfg } as PluginConfig,
-        "provider", undefined, "nudgeFrequency",
+        "provider",
+        undefined,
+        "nudgeFrequency",
     )
     assert.equal(nf, 7, "override field nudgeFrequency applied")
 })
@@ -396,7 +447,7 @@ test("same provider both levels with no model overlap: fields from both preserve
 test("providers can be set on minimal compress config", () => {
     const errors = validateConfigTypes({
         compress: {
-            providers: { "test": { nudgeFrequency: 5 } },
+            providers: { test: { nudgeFrequency: 5 } },
         },
     })
     assert.equal(errors.length, 0)
@@ -404,8 +455,8 @@ test("providers can be set on minimal compress config", () => {
 
 test("providers with only model overrides (no provider-level fields) works", () => {
     const config = baseConfig({
-        "provider": {
-            models: { "model": { nudgeFrequency: 8 } },
+        provider: {
+            models: { model: { nudgeFrequency: 8 } },
         },
     })
     const val = getResolvedCompressValue(config, "provider", "model", "nudgeFrequency")
@@ -422,7 +473,12 @@ test("provider key '**' is treated literally, resolves only when looked up as '*
     })
     const exact = getResolvedCompressValue(config, "**", undefined, "nudgeFrequency")
     assert.equal(exact, 7, "exact lookup of '**' returns its value")
-    const notWildcard = getResolvedCompressValue(config, "some-provider", undefined, "nudgeFrequency")
+    const notWildcard = getResolvedCompressValue(
+        config,
+        "some-provider",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(notWildcard, undefined, "'**' does not act as wildcard for other providers")
 })
 
@@ -446,7 +502,7 @@ test("provider key with regex special chars resolves literally", () => {
 
 test("model key with regex special chars resolves literally", () => {
     const config = baseConfig({
-        "provider": {
+        provider: {
             models: {
                 "mo(del)?": { nudgeFrequency: 9 },
             },
@@ -470,7 +526,7 @@ test("multiple identical wildcard keys (last wins in JS object)", () => {
 // --- Edge: disabled scenario with providers ---
 
 test("providers still present when enabled=false in override", () => {
-    const base = baseConfig({ "provider": { nudgeFrequency: 10 } }).compress
+    const base = baseConfig({ provider: { nudgeFrequency: 10 } }).compress
     const merged = mergeCompress(base, { enabled: false as any })
     assert.ok("provider" in merged.providers!, "providers should survive non-provider overrides")
 })

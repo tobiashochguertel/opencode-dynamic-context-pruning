@@ -5,20 +5,28 @@ import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -51,7 +59,12 @@ test("model-level wildcard applies to unknown model under known provider", () =>
             },
         },
     })
-    const result = getResolvedCompressValue(config, "opencode-go", "unknown-model", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "opencode-go",
+        "unknown-model",
+        "nudgeFrequency",
+    )
     assert.equal(result, 3)
 })
 
@@ -64,7 +77,12 @@ test("exact model beats model-level wildcard under same provider", () => {
             },
         },
     })
-    const exactResult = getResolvedCompressValue(config, "opencode-go", "exact-model", "nudgeFrequency")
+    const exactResult = getResolvedCompressValue(
+        config,
+        "opencode-go",
+        "exact-model",
+        "nudgeFrequency",
+    )
     assert.equal(exactResult, 99)
 })
 
@@ -91,7 +109,12 @@ test("wildcard provider * with wildcard model * applies to any provider+model", 
             },
         },
     })
-    const result = getResolvedCompressValue(config, "random-provider", "random-model", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "random-provider",
+        "random-model",
+        "nudgeFrequency",
+    )
     assert.equal(result, 2)
 })
 
@@ -106,7 +129,12 @@ test("wildcard provider model beats specific provider global", () => {
             nudgeFrequency: 10,
         },
     })
-    const result = getResolvedCompressValue(config, "exact-provider", "common-model", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "exact-provider",
+        "common-model",
+        "nudgeFrequency",
+    )
     assert.equal(result, 2)
 })
 
@@ -133,7 +161,12 @@ test("wildcard-only config applies to any unlisted provider", () => {
     const config = baseConfig({
         "*": { nudgeFrequency: 5 },
     })
-    const result1 = getResolvedCompressValue(config, "unknown-provider", undefined, "nudgeFrequency")
+    const result1 = getResolvedCompressValue(
+        config,
+        "unknown-provider",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(result1, 5)
     const result2 = getResolvedCompressValue(config, "opencode-go", undefined, "nudgeFrequency")
     assert.equal(result2, 5)
@@ -152,7 +185,12 @@ test("wildcard-only config field not set at wildcard level falls through to glob
     const config = baseConfig({
         "*": { nudgeFrequency: 5 },
     })
-    const result = getResolvedCompressValue(config, "unknown-provider", undefined, "iterationNudgeThreshold")
+    const result = getResolvedCompressValue(
+        config,
+        "unknown-provider",
+        undefined,
+        "iterationNudgeThreshold",
+    )
     assert.equal(result, undefined)
 })
 
@@ -171,7 +209,7 @@ test("wildcard provider model field not overridden by specific provider global",
     const config = baseConfig({
         "*": {
             models: {
-                "m1": { nudgeFrequency: 3 },
+                m1: { nudgeFrequency: 3 },
             },
         },
         "opencode-go": {
@@ -188,7 +226,7 @@ test("wildcard model applies when exact provider has empty models object", () =>
     const config = baseConfig({
         "*": {
             models: {
-                "flash": { nudgeFrequency: 1 },
+                flash: { nudgeFrequency: 1 },
             },
         },
         "opencode-go": {
@@ -203,7 +241,7 @@ test("wildcard model applies when exact provider has no models key", () => {
     const config = baseConfig({
         "*": {
             models: {
-                "flash": { nudgeFrequency: 1 },
+                flash: { nudgeFrequency: 1 },
             },
         },
         "opencode-go": {},
@@ -226,23 +264,41 @@ test("full resolution chain: exact model > exact provider > wildcard model > wil
             nudgeFrequency: 3,
             models: {
                 "shared-model": { nudgeFrequency: 4 },
-                "flash": { nudgeFrequency: 5 },
+                flash: { nudgeFrequency: 5 },
             },
         },
     })
 
-    assert.equal(getResolvedCompressValue(config, "opencode-go", "flash", "nudgeFrequency"), 5,
-        "exact model flash should win")
-    assert.equal(getResolvedCompressValue(config, "opencode-go", "shared-model", "nudgeFrequency"), 4,
-        "exact model shared-model under exact provider should win over wildcard model")
-    assert.equal(getResolvedCompressValue(config, "opencode-go", "other-model", "nudgeFrequency"), 3,
-        "exact provider should win over wildcard provider")
-    assert.equal(getResolvedCompressValue(config, "unknown-provider", "shared-model", "nudgeFrequency"), 2,
-        "wildcard model under wildcard provider should apply")
-    assert.equal(getResolvedCompressValue(config, "unknown-provider", "other-model", "nudgeFrequency"), 1,
-        "wildcard provider should apply")
-    assert.equal(getResolvedCompressValue(config, "other", "nonexistent", "nudgeFrequency"), 1,
-        "wildcard provider should apply to any unmatched")
+    assert.equal(
+        getResolvedCompressValue(config, "opencode-go", "flash", "nudgeFrequency"),
+        5,
+        "exact model flash should win",
+    )
+    assert.equal(
+        getResolvedCompressValue(config, "opencode-go", "shared-model", "nudgeFrequency"),
+        4,
+        "exact model shared-model under exact provider should win over wildcard model",
+    )
+    assert.equal(
+        getResolvedCompressValue(config, "opencode-go", "other-model", "nudgeFrequency"),
+        3,
+        "exact provider should win over wildcard provider",
+    )
+    assert.equal(
+        getResolvedCompressValue(config, "unknown-provider", "shared-model", "nudgeFrequency"),
+        2,
+        "wildcard model under wildcard provider should apply",
+    )
+    assert.equal(
+        getResolvedCompressValue(config, "unknown-provider", "other-model", "nudgeFrequency"),
+        1,
+        "wildcard provider should apply",
+    )
+    assert.equal(
+        getResolvedCompressValue(config, "other", "nonexistent", "nudgeFrequency"),
+        1,
+        "wildcard provider should apply to any unmatched",
+    )
 })
 
 // --- Provider IDs with special characters ---
@@ -263,7 +319,12 @@ test("model ID with slash matches wildcard model", () => {
             },
         },
     })
-    const result = getResolvedCompressValue(config, "any-provider", "org/model:variant", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "any-provider",
+        "org/model:variant",
+        "nudgeFrequency",
+    )
     assert.equal(result, 7)
 })
 
@@ -275,7 +336,12 @@ test("model ID with colon and slash matches exact model with wildcard provider",
             },
         },
     })
-    const result = getResolvedCompressValue(config, "any-provider", "org/model:variant", "nudgeFrequency")
+    const result = getResolvedCompressValue(
+        config,
+        "any-provider",
+        "org/model:variant",
+        "nudgeFrequency",
+    )
     assert.equal(result, 42)
 })
 
@@ -298,10 +364,15 @@ test("field only at wildcard model level, not at wildcard provider, returns corr
     const config = baseConfig({
         "*": {
             models: {
-                "flash": { protectUserMessages: true },
+                flash: { protectUserMessages: true },
             },
         },
     })
-    const result = getResolvedCompressValue(config, "unknown-provider", "flash", "protectUserMessages")
+    const result = getResolvedCompressValue(
+        config,
+        "unknown-provider",
+        "flash",
+        "protectUserMessages",
+    )
     assert.equal(result, true)
 })

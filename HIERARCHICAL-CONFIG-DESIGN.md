@@ -81,20 +81,20 @@ This naturally covers the `google/*` wildcard use case from issue #505 — just 
 
 All levels (global, provider, model) accept the same set of override-able fields:
 
-| Field                      | Type                      | Description                                  |
-| -------------------------- | ------------------------- | -------------------------------------------- |
-| `mode`                       | `"range" \| "message"`      | Compression mode                             |
-| `permission`                 | `"ask" \| "allow" \| "deny"` | Tool permission                              |
-| `showCompression`            | `boolean`                 | Show compression summaries                   |
-| `summaryBuffer`              | `boolean`                 | Extend max limit with summary tokens        |
-| `maxContextLimit`            | `number \| "${number}%"`    | Soft upper context threshold                 |
-| `minContextLimit`            | `number \| "${number}%"`    | Soft lower context threshold                 |
-| `nudgeFrequency`             | `number`                  | Context-limit nudge interval                 |
-| `iterationNudgeThreshold`    | `number`                  | Messages after user msg before iteration nudges |
-| `nudgeForce`                 | `"strong" \| "soft"`       | Compression likelihood control               |
-| `protectedTools`             | `string[]`                | Tools protected from pruning                 |
-| `protectTags`                | `boolean`                 | Preserve `<protect>` tags                   |
-| `protectUserMessages`        | `boolean`                 | Never lose user messages                     |
+| Field                     | Type                         | Description                                     |
+| ------------------------- | ---------------------------- | ----------------------------------------------- |
+| `mode`                    | `"range" \| "message"`       | Compression mode                                |
+| `permission`              | `"ask" \| "allow" \| "deny"` | Tool permission                                 |
+| `showCompression`         | `boolean`                    | Show compression summaries                      |
+| `summaryBuffer`           | `boolean`                    | Extend max limit with summary tokens            |
+| `maxContextLimit`         | `number \| "${number}%"`     | Soft upper context threshold                    |
+| `minContextLimit`         | `number \| "${number}%"`     | Soft lower context threshold                    |
+| `nudgeFrequency`          | `number`                     | Context-limit nudge interval                    |
+| `iterationNudgeThreshold` | `number`                     | Messages after user msg before iteration nudges |
+| `nudgeForce`              | `"strong" \| "soft"`         | Compression likelihood control                  |
+| `protectedTools`          | `string[]`                   | Tools protected from pruning                    |
+| `protectTags`             | `boolean`                    | Preserve `<protect>` tags                       |
+| `protectUserMessages`     | `boolean`                    | Never lose user messages                        |
 
 Note: `protectedTools` at provider/model level **adds to** (does not replace) the parent level's list. All other fields override the parent value.
 
@@ -108,48 +108,52 @@ The old `modelMaxLimits` and `modelMinLimits` keys are **removed**. To aid migra
 ### Migration Example
 
 **Before (flat):**
+
 ```jsonc
 {
-  "compress": {
-    "maxContextLimit": "90%",
-    "modelMaxLimits": {
-      "google/gemini-2.5-pro": 200000,
-      "anthropic/claude-opus-4-6": "70%"
-    }
-  }
+    "compress": {
+        "maxContextLimit": "90%",
+        "modelMaxLimits": {
+            "google/gemini-2.5-pro": 200000,
+            "anthropic/claude-opus-4-6": "70%",
+        },
+    },
 }
 ```
 
 **After (hierarchical):**
+
 ```jsonc
 {
-  "compress": {
-    "maxContextLimit": "90%",
-    "providers": {
-      "google": {
-        "models": {
-          "gemini-2.5-pro": { "maxContextLimit": 200000 }
-        }
-      },
-      "anthropic": {
-        "models": {
-          "claude-opus-4-6": { "maxContextLimit": "70%" }
-        }
-      }
-    }
-  }
+    "compress": {
+        "maxContextLimit": "90%",
+        "providers": {
+            "google": {
+                "models": {
+                    "gemini-2.5-pro": { "maxContextLimit": 200000 },
+                },
+            },
+            "anthropic": {
+                "models": {
+                    "claude-opus-4-6": { "maxContextLimit": "70%" },
+                },
+            },
+        },
+    },
 }
 ```
 
 ## Implementation Plan
 
 ### Phase 1: Schema (`dcp.schema.json`)
+
 - Add `compress.providers` object with `additionalProperties` for provider IDs
 - Each provider has the same sub-schema as `compress`
 - Each provider has optional `models` object with per-model overrides
 - Mark `modelMaxLimits`/`modelMinLimits` as deprecated
 
 ### Phase 2: Config Type & Parsing (`lib/config.ts`)
+
 - Update `PluginConfig` and `CompressConfig` interfaces
 - Add `providers: Record<string, ProviderOverrides>` field
 - `ProviderOverrides` mirrors `CompressConfig` fields + optional `models`
@@ -158,30 +162,33 @@ The old `modelMaxLimits` and `modelMinLimits` keys are **removed**. To aid migra
 - `VALID_CONFIG_KEYS` includes new hierarchical paths
 
 ### Phase 3: Resolution (`lib/messages/inject/utils.ts`)
+
 - Create `resolveEffectiveConfig()` function that walks the hierarchy:
-  ```typescript
-  function resolveEffectiveConfig(
-    config: PluginConfig,
-    providerId: string | undefined,
-    modelId: string | undefined,
-  ): ResolvedCompressConfig
-  ```
+    ```typescript
+    function resolveEffectiveConfig(
+        config: PluginConfig,
+        providerId: string | undefined,
+        modelId: string | undefined,
+    ): ResolvedCompressConfig
+    ```
 - Cache resolved config per (providerId, modelId) pair
 - `getNudgeFrequency()`, `getIterationNudgeThreshold()`, etc. accept resolved config
 
 ### Phase 4: Integration (`lib/messages/inject/inject.ts`)
+
 - `injectCompressNudges()` calls `resolveEffectiveConfig()` once
 - Passes resolved config instead of raw config to all downstream helpers
 
 ### Phase 5: Build & Docs
+
 - `bun run build` to produce updated `dist/`
 - Update `README.md` with new hierarchical config examples
 
 ## Open Questions
 
 1. Should the resolution cache invalidate on session change?
-   - Yes — resolved config should be recomputed per session
+    - Yes — resolved config should be recomputed per session
 2. Should `protectedTools` merge or replace at each level?
-   - Merge (additive) — provider adds to plugin defaults, model adds to provider
+    - Merge (additive) — provider adds to plugin defaults, model adds to provider
 3. Should overrides in `providers["*"].models[modelId]` beat exact `providers[providerId]` globals?
-   - Yes — model-level always beats provider-level, even through wildcard
+    - Yes — model-level always beats provider-level, even through wildcard

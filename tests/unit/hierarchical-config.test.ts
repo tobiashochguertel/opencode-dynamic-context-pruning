@@ -48,7 +48,12 @@ test("returns provider-level override when provider matches", () => {
             "opencode-go": { nudgeFrequency: 10 },
         },
     })
-    const result = getResolvedCompressValue<number>(config, "opencode-go", undefined, "nudgeFrequency")
+    const result = getResolvedCompressValue<number>(
+        config,
+        "opencode-go",
+        undefined,
+        "nudgeFrequency",
+    )
     assert.equal(result, 10)
 })
 
@@ -63,7 +68,10 @@ test("returns model-level override when model matches", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", "deepseek-v4-pro", "nudgeFrequency",
+        config,
+        "opencode-go",
+        "deepseek-v4-pro",
+        "nudgeFrequency",
     )
     assert.equal(result, 3)
 })
@@ -80,7 +88,10 @@ test("model-level beats provider-level when both match", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", "deepseek-v4-pro", "nudgeFrequency",
+        config,
+        "opencode-go",
+        "deepseek-v4-pro",
+        "nudgeFrequency",
     )
     assert.equal(result, 3)
 })
@@ -92,7 +103,10 @@ test("wildcard provider * applies to all providers", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "unknown-provider", undefined, "nudgeFrequency",
+        config,
+        "unknown-provider",
+        undefined,
+        "nudgeFrequency",
     )
     assert.equal(result, 8)
 })
@@ -105,7 +119,10 @@ test("exact provider beats wildcard provider", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", undefined, "nudgeFrequency",
+        config,
+        "opencode-go",
+        undefined,
+        "nudgeFrequency",
     )
     assert.equal(result, 12)
 })
@@ -125,7 +142,10 @@ test("wildcard provider model beats exact provider global", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", "deepseek-v4-flash", "nudgeFrequency",
+        config,
+        "opencode-go",
+        "deepseek-v4-flash",
+        "nudgeFrequency",
     )
     assert.equal(result, 2)
 })
@@ -146,7 +166,10 @@ test("exact provider model beats wildcard provider model", () => {
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", "deepseek-v4-flash", "nudgeFrequency",
+        config,
+        "opencode-go",
+        "deepseek-v4-flash",
+        "nudgeFrequency",
     )
     assert.equal(result, 99)
 })
@@ -160,7 +183,10 @@ test("returns undefined when provider exists but field not set at any level", ()
         },
     })
     const result = getResolvedCompressValue<number>(
-        config, "opencode-go", undefined, "iterationNudgeThreshold",
+        config,
+        "opencode-go",
+        undefined,
+        "iterationNudgeThreshold",
     )
     assert.equal(result, undefined)
 })
@@ -169,7 +195,7 @@ test("resolves percentage context limits from provider level", () => {
     const config = baseConfig({
         maxContextLimit: "90%",
         providers: {
-            "google": {
+            google: {
                 maxContextLimit: "80%",
                 models: {
                     "gemini-2.5-pro": { maxContextLimit: 200000 },
@@ -178,12 +204,18 @@ test("resolves percentage context limits from provider level", () => {
         },
     })
     const providerResult = getResolvedCompressValue<number | `${number}%`>(
-        config, "google", undefined, "maxContextLimit",
+        config,
+        "google",
+        undefined,
+        "maxContextLimit",
     )
     assert.equal(providerResult, "80%")
 
     const modelResult = getResolvedCompressValue<number | `${number}%`>(
-        config, "google", "gemini-2.5-pro", "maxContextLimit",
+        config,
+        "google",
+        "gemini-2.5-pro",
+        "maxContextLimit",
     )
     assert.equal(modelResult, 200000)
 })
@@ -198,7 +230,10 @@ test("nudgeForce can be overridden per provider", () => {
         },
     })
     const result = getResolvedCompressValue<"strong" | "soft">(
-        config, "opencode-go", undefined, "nudgeForce",
+        config,
+        "opencode-go",
+        undefined,
+        "nudgeForce",
     )
     assert.equal(result, "strong")
 })
@@ -215,7 +250,10 @@ test("protectUserMessages can be overridden per model", () => {
         },
     })
     const result = getResolvedCompressValue<boolean>(
-        config, "opencode-go", "deepseek-v4-pro", "protectUserMessages",
+        config,
+        "opencode-go",
+        "deepseek-v4-pro",
+        "protectUserMessages",
     )
     assert.equal(result, true)
 })

@@ -1,8 +1,11 @@
 {
     "$schema": "https://json.schemastore.org/package.json",
     "name": "@tarquinen/opencode-dcp",
-    "version": "3.1.12",
+    "version": "3.2.0",
     "type": "module",
+    "workspaces": [
+        "tests/logger"
+    ],
     "description": "OpenCode plugin that optimizes token usage by pruning obsolete tool outputs from conversation context",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -14,6 +17,10 @@
         "./server": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
+        },
+        "./tui": {
+            "types": "./dist/tui.d.ts",
+            "import": "./tui.tsx"
         }
     },
     "scripts": {
@@ -23,8 +30,9 @@
         "check:package": "npm run build && npm run verify:package",
         "prepublishOnly": "npm run check:package",
         "dev": "opencode plugin dev",
-        "typecheck": "tsc --noEmit",
-        "test": "npm run test:unit && npm run test:integration",
+        "sandbox": "node scripts/sandbox.mjs",
+        "typecheck": "tsc --noEmit && npm run typecheck --workspace=tests/logger",
+        "test": "npm run test:unit && npm run test:integration && node --import tsx --test tests/*.test.ts && npm test --workspace=tests/logger",
         "test:unit": "node --import tsx --test tests/unit/*.test.ts",
         "test:integration": "node --import tsx --test tests/integration/*.test.ts",
         "test:e2e": "bash tests/e2e/test-dcp-cache.sh",
@@ -43,34 +51,47 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Tarquinen/opencode-dynamic-context-pruning.git"
+        "url": "git+https://github.com/Opencode-DCP/opencode-dynamic-context-pruning.git"
     },
     "bugs": {
-        "url": "https://github.com/Tarquinen/opencode-dynamic-context-pruning/issues"
+        "url": "https://github.com/Opencode-DCP/opencode-dynamic-context-pruning/issues"
     },
-    "homepage": "https://github.com/Tarquinen/opencode-dynamic-context-pruning#readme",
+    "homepage": "https://github.com/Opencode-DCP/opencode-dynamic-context-pruning#readme",
     "author": "tarquinen",
     "license": "AGPL-3.0-or-later",
     "peerDependencies": {
+        "@opencode-ai/plugin": ">=1.18.29",
         "@opencode/plugin": ">=2.0.9"
     },
     "dependencies": {
         "@anthropic-ai/tokenizer": "^0.0.4",
         "@opencode-ai/sdk": "^1.4.3",
+        "@opentui/core": "0.5.10",
+        "@opentui/solid": "0.5.10",
         "jsonc-parser": "^3.3.1",
+        "solid-js": "^1.9.12",
         "zod": "^4.1.8",
-        "@opencode/plugin": "^2.0.9"
+        "@opencode/plugin": "2.0.9"
     },
     "devDependencies": {
+        "@opencode-ai/plugin": "^1.18.29",
+        "@opencode/theme": "2.0.9",
         "@types/node": "^25.5.0",
         "prettier": "^3.8.1",
         "tsup": "^8.5.1",
         "tsx": "^4.21.0",
         "typescript": "^6.0.2",
-        "@opencode/plugin": "^2.0.9"
+        "@opencode/plugin": "2.0.9"
+    },
+    "overrides": {
+        "@babel/core": "7.29.7",
+        "esbuild": "0.28.1"
     },
     "files": [
         "dist/",
+        "lib/",
+        "server.js",
+        "tui.tsx",
         "README.md",
         "LICENSE"
     ]

@@ -1,25 +1,38 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import type { PluginConfig, } from "../../lib/config"
-import { getNudgeFrequency, getIterationNudgeThreshold, getModelInfo, isContextOverLimits } from "../../lib/messages/inject/utils"
+import type { PluginConfig } from "../../lib/config"
+import {
+    getNudgeFrequency,
+    getIterationNudgeThreshold,
+    getModelInfo,
+    isContextOverLimits,
+} from "../../lib/messages/inject/utils"
 import { createSessionState, type WithParts } from "../../lib/state"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: "90%", minContextLimit: "25%",
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: "90%",
+            minContextLimit: "25%",
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -32,22 +45,32 @@ function baseConfig(providers?: Record<string, any>): PluginConfig {
 function userMsg(id: string, text: string, provider: string, model: string): WithParts {
     return {
         info: {
-            id, role: "user" as const, sessionID: "ses_nudge",
-            agent: "assistant", time: { created: 1 },
+            id,
+            role: "user" as const,
+            sessionID: "ses_nudge",
+            agent: "assistant",
+            time: { created: 1 },
             model: { providerID: provider, modelID: model, limit: { context: 200000 } },
         } as any,
-        parts: [{ id: id + "-p", messageID: id, sessionID: "ses_nudge", type: "text" as const, text }],
+        parts: [
+            { id: id + "-p", messageID: id, sessionID: "ses_nudge", type: "text" as const, text },
+        ],
     }
 }
 
 function assistMsg(id: string, text: string, inputTokens = 1000): WithParts {
     return {
         info: {
-            id, role: "assistant" as const, sessionID: "ses_nudge",
-            agent: "assistant", time: { created: 2 },
+            id,
+            role: "assistant" as const,
+            sessionID: "ses_nudge",
+            agent: "assistant",
+            time: { created: 2 },
             tokens: { input: inputTokens, output: 50, reasoning: 0, cache: { read: 0, write: 0 } },
         } as any,
-        parts: [{ id: id + "-p", messageID: id, sessionID: "ses_nudge", type: "text" as const, text }],
+        parts: [
+            { id: id + "-p", messageID: id, sessionID: "ses_nudge", type: "text" as const, text },
+        ],
     }
 }
 

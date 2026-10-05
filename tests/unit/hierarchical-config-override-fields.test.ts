@@ -5,20 +5,28 @@ import type { PluginConfig } from "../../lib/config"
 
 function baseConfig(providers?: Record<string, any>): PluginConfig {
     return {
-        enabled: true, debug: false,
-        pruneNotification: "off", pruneNotificationType: "chat",
+        enabled: true,
+        debug: false,
+        pruneNotification: "off",
+        pruneNotificationType: "chat",
         commands: { enabled: true, protectedTools: [] },
         manualMode: { enabled: false, automaticStrategies: true },
         turnProtection: { enabled: false, turns: 4 },
         experimental: { allowSubAgents: false, customPrompts: false },
         protectedFilePatterns: [],
         compress: {
-            mode: "range", permission: "allow",
-            showCompression: false, summaryBuffer: true,
-            maxContextLimit: 100000, minContextLimit: 50000,
-            nudgeFrequency: 5, iterationNudgeThreshold: 15,
-            nudgeForce: "soft", protectedTools: ["task"],
-            protectTags: false, protectUserMessages: false,
+            mode: "range",
+            permission: "allow",
+            showCompression: false,
+            summaryBuffer: true,
+            maxContextLimit: 100000,
+            minContextLimit: 50000,
+            nudgeFrequency: 5,
+            iterationNudgeThreshold: 15,
+            nudgeForce: "soft",
+            protectedTools: ["task"],
+            protectTags: false,
+            protectUserMessages: false,
             providers,
         },
         strategies: {
@@ -29,7 +37,10 @@ function baseConfig(providers?: Record<string, any>): PluginConfig {
 }
 
 function assertOverride(field: string, providerVal: any, modelVal: any, globalVal: any) {
-    const cfg = (p: any) => baseConfig({ "test-provider": { ...p, models: { "test-model": p.models?.["test-model"] ?? {} } } })
+    const cfg = (p: any) =>
+        baseConfig({
+            "test-provider": { ...p, models: { "test-model": p.models?.["test-model"] ?? {} } },
+        })
 
     test(`${field} — provider override works`, () => {
         const config = cfg({ [field]: providerVal })
@@ -38,7 +49,10 @@ function assertOverride(field: string, providerVal: any, modelVal: any, globalVa
     })
 
     test(`${field} — model override beats provider`, () => {
-        const config = cfg({ [field]: providerVal, models: { "test-model": { [field]: modelVal } } })
+        const config = cfg({
+            [field]: providerVal,
+            models: { "test-model": { [field]: modelVal } },
+        })
         const result = getResolvedCompressValue(config, "test-provider", "test-model", field as any)
         assert.deepEqual(result, modelVal)
     })
@@ -92,7 +106,11 @@ test("getConfigKeyPaths skips compress.providers recursively", () => {
     }
     const invalid = getInvalidConfigKeys(config as any)
     const providerKeys = invalid.filter((k) => k.includes("compress.providers"))
-    assert.equal(providerKeys.length, 0, `should not report any provider keys, got: ${providerKeys.join(", ")}`)
+    assert.equal(
+        providerKeys.length,
+        0,
+        `should not report any provider keys, got: ${providerKeys.join(", ")}`,
+    )
 })
 
 test("getConfigKeyPaths skips compress.modelMaxLimits and modelMinLimits recursively", () => {
@@ -103,7 +121,9 @@ test("getConfigKeyPaths skips compress.modelMaxLimits and modelMinLimits recursi
         },
     }
     const invalid = getInvalidConfigKeys(config as any)
-    const limitKeys = invalid.filter((k) => k.includes("modelMaxLimits") || k.includes("modelMinLimits"))
+    const limitKeys = invalid.filter(
+        (k) => k.includes("modelMaxLimits") || k.includes("modelMinLimits"),
+    )
     assert.equal(limitKeys.length, 0)
 })
 

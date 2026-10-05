@@ -832,7 +832,10 @@ test("compress message mode skips invalid batch entries and reports issues", asy
     assert.match(result.content, /^Compressed 1 message into \[Compressed conversation section\]\./)
     assert.match(result.content, /Skipped 3 issues:/)
     assert.match(result.content, /Block IDs like bN are not allowed/)
-    assert.match(result.content, /messageId m9999 is not available in the current conversation context/)
+    assert.match(
+        result.content,
+        /messageId m9999 is not available in the current conversation context/,
+    )
     assert.match(result.content, /messageId m0002 was selected more than once in this batch\./)
 })
 

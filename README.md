@@ -9,13 +9,26 @@ Automatically reduces token usage in OpenCode by managing conversation context.
 
 ## Installation
 
-Install from the CLI:
+Install from the OpenCode V2 CLI:
 
 ```bash
-opencode plugin @tarquinen/opencode-dcp@latest --global
+opencode plugin add @tarquinen/opencode-dcp@latest
 ```
 
 This installs the package and adds it to your global OpenCode config.
+
+## Project Status
+
+Development on DCP has slowed because most new context-management work has moved to [Sleev](https://sleev.ai) and the `sleev` CLI.
+
+Sleev builds on DCP's core ideas with more advanced context management and significantly better performance. It's a local proxy that already supports Claude Code, Codex, OpenCode, Pi, and Hermes, and can be extended to support any harness.
+
+DCP remains available for OpenCode plugin users, but new features are landing in Sleev first. If you are starting fresh, we recommend trying Sleev:
+
+```bash
+npm i -g sleev
+sleev
+```
 
 ## How It Works
 
@@ -38,7 +51,7 @@ Identifies repeated tool calls (same tool, same arguments) and keeps only the mo
 
 ### Purge Errors
 
-Prunes inputs from errored tool calls after a configurable number of turns (default: 4). Error messages are preserved; only the potentially large input content is removed. Recalculated on compress tool use.
+Prunes inputs from errored tool calls after a configurable number of turns. Error messages are preserved; only the potentially large input content is removed. Recalculated on compress tool use.
 
 ## Configuration
 
@@ -51,7 +64,7 @@ DCP uses its own config file, searched in order:
 Each level overrides the previous, so project settings take priority over global. Restart OpenCode after making config changes.
 
 > [!NOTE]
-> If you use models with smaller context windows, such as GitHub Copilot models or local models, lower `compress.minContextLimit` and `compress.maxContextLimit` in your configuration to match the available context.
+> If your model has a smaller context window, lower `compress.minContextLimit` and `compress.maxContextLimit` in your configuration to match the available context.
 
 > [!IMPORTANT]
 > Defaults are applied automatically. Expand this if you want to review or override settings.
@@ -166,20 +179,14 @@ Each level overrides the previous, so project settings take priority over global
 
 ### Commands
 
-DCP provides a `/dcp` slash command:
+DCP provides a TUI panel and one prompt-producing slash command:
 
-- `/dcp` — Shows available DCP commands
-- `/dcp context` — Shows a breakdown of your current session's token usage by category (system, user, assistant, tools, etc.) and how much has been saved through pruning.
-- `/dcp stats` — Shows cumulative pruning statistics across all sessions.
-- `/dcp sweep` — Prunes all tools since the last user message. Accepts an optional count: `/dcp sweep 10` prunes the last 10 tools. Respects `commands.protectedTools`.
-- `/dcp manual [on|off]` — Toggle manual mode or set explicit state. When on, the AI will not autonomously use context management tools.
-- `/dcp compress [focus]` — Trigger a single compress tool execution. Optional focus text directs what content to compress, following the active `compress.mode`.
-- `/dcp decompress <n>` — Restore a specific active compression by ID (for example `/dcp decompress 2`). Running without an argument shows available compression IDs, token sizes, and topics.
-- `/dcp recompress <n>` — Re-apply a user-decompressed compression by ID (for example `/dcp recompress 2`). Running without an argument shows recompressible IDs, token sizes, and topics.
+- `/dcp` — Opens the DCP panel with context, stats, and manual-mode controls.
+- `/dcp-compress [focus]` — Asks the model to run one compression pass. Optional focus text directs what content to compress, following the active `compress.mode`.
 
 ### Prompt Overrides
 
-DCP exposes six editable prompts:
+DCP exposes the following editable prompts:
 
 - `system`
 - `compress-range`
@@ -210,6 +217,7 @@ For the `compress` tool, `compress.protectedTools` ensures specific tool outputs
 DCP supports hierarchical configuration overrides via `compress.providers`. This replaces the deprecated `modelMaxLimits`/`modelMinLimits` keys.
 
 **Resolution order** (last wins):
+
 1. `compress.*` — plugin-level defaults (lowest priority)
 2. `compress.providers["*"].*` — wildcard provider (all providers)
 3. `compress.providers[providerId].*` — all models under that provider
@@ -233,17 +241,17 @@ DCP supports hierarchical configuration overrides via `compress.providers`. This
                     // Specific model overrides its provider
                     "gemini-2.5-pro": {
                         "maxContextLimit": 200000,
-                        "nudgeFrequency": 3
-                    }
-                }
+                        "nudgeFrequency": 3,
+                    },
+                },
             },
 
             // Wildcard applies to any provider not explicitly listed
             "*": {
-                "nudgeFrequency": 6
-            }
-        }
-    }
+                "nudgeFrequency": 6,
+            },
+        },
+    },
 }
 ```
 
@@ -253,15 +261,18 @@ Any compress field can be overridden per provider and per model.
 
 LLM providers cache prompts based on exact prefix matching. When DCP prunes content, it changes messages, which invalidates cached prefixes from that point forward.
 
-**Trade-off:** You lose some cache reads but gain token savings from reduced context size and fewer hallucinations from stale context. In most cases, especially in long sessions, the savings outweigh the cache miss cost.
-
-> [!NOTE]
-> In testing, cache hit rates were approximately 85% with DCP vs 90% without.
+**Trade-off:** Pruning reduces context size but can increase cache misses. The cost
+balance depends on your conversation, compression frequency, and provider pricing.
 
 **No impact for:**
 
-- **Request-based billing** — Providers like GitHub Copilot that charge per request, not tokens.
-- **Uniform token pricing** — Providers like Cerebras that bill cached and uncached tokens at the same rate.
+- **Request-based billing** — Some providers charge per request, not tokens.
+- **Uniform token pricing** — Providers that bill cached and uncached tokens at the same rate.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, local installation,
+and testing with the V1/V2 sandbox.
 
 ## License
 

@@ -13,19 +13,29 @@ const builtinNames = new Set([
     ...builtinModules.map((name) => name.replace(/^node:/, "")),
 ])
 
-const requiredRepoFiles = ["dist/index.js", "dist/index.d.ts", "README.md", "LICENSE"]
+const requiredRepoFiles = [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/tui.d.ts",
+    "tui.tsx",
+    "server.js",
+    "README.md",
+    "LICENSE",
+]
 
 const requiredTarballFiles = [
     "package.json",
     "dist/index.js",
     "dist/index.d.ts",
+    "dist/tui.d.ts",
+    "tui.tsx",
+    "server.js",
     "README.md",
     "LICENSE",
 ]
 
 const forbiddenTarballPatterns = [
     /^node_modules\//,
-    /^lib\//,
     /^index\.ts$/,
     /^tests\//,
     /^scripts\//,
@@ -67,8 +77,12 @@ function assertPackageJsonShape() {
         fail("expected package.json exports['./server'].import to be './dist/index.js'")
     }
 
+    if (pkg.exports?.["./tui"]?.import !== "./tui.tsx") {
+        fail("expected package.json exports['./tui'].import to be './tui.tsx'")
+    }
+
     const files = Array.isArray(pkg.files) ? pkg.files : []
-    for (const entry of ["dist/", "README.md", "LICENSE"]) {
+    for (const entry of ["dist/", "lib/", "tui.tsx", "README.md", "LICENSE"]) {
         if (!files.includes(entry)) {
             fail(`package.json files must include ${entry}`)
         }
@@ -163,7 +177,7 @@ function packageLooksCommonJs(pkg) {
 }
 
 function validateRuntimeImportGraph() {
-    const pending = [path.join(root, "index.ts")]
+    const pending = [path.join(root, "index.ts"), path.join(root, "tui.tsx")]
     const seen = new Set()
 
     while (pending.length > 0) {
@@ -204,7 +218,8 @@ function validatePackedFiles() {
         encoding: "utf8",
     })
 
-    const [result] = JSON.parse(output)
+    // npm versions return either an array or an object keyed by package name.
+    const [result] = Object.values(JSON.parse(output))
     if (!result || !Array.isArray(result.files)) {
         fail("npm pack --dry-run --json did not return file metadata")
     }
